@@ -1,0 +1,24 @@
+{
+  "name": "JitCoin",
+  "version": "0.0.1",
+  "description": "A JitCoin written in TypeScript.",
+  "main": "index.js",
+  "repository": "https://github.com/jithubxyz/JitCoin.git",
+  "author": "flokol120 <flo@xn--drr-sna.site>",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^10.12.19",
+    "gts": "^0.9.0",
+    "typescript": "~3.1.0"
+  },
+  "scripts": {
+    "check": "gts check",
+    "clean": "gts clean",
+    "compile": "tsc -p .",
+    "fix": "gts fix",
+    "prepare": "npm run compile",
+    "pretest": "npm run compile",
+    "posttest": "npm run check"
+  },
+  "dependencies": {}
+}
