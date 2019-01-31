@@ -41,13 +41,14 @@ export class Block {
      */
     mine() {
         let i = 0;
-        while (this.hash[0] !== '0') {
-            this.hash = createHash('sha512').update(this.data.getData() + i).digest().toString('hex');
+        console.log("data: " + this.data.getData().toString());
+        console.log('trying to find nonce...');
+        while (this.hash[0] !== '0' || this.hash[1] !== '1' || this.hash[2] !== '2' || this.hash[3] !== '3') {
+            this.hash = createHash('sha512').update(this.data.getData().toString() + i).digest().toString('hex');
             console.log(this.hash);
-            console.log('');
             i++;
         }
-        console.log('found');
+        console.log('nonce found! it\'s ' + i);
         this.nonce = i;
     }
 }
@@ -92,7 +93,7 @@ export class Data {
     getMerkleTree(): string {
         let childs = [];
         for (let i = 0; i < this.transactions.length; i++) {
-            childs.push(createHash('sha512').update(this.transactions[i].sender + this.transactions[i].receiver + this.transactions[i].amount).digest().toString('hex'));
+            childs.push(createHash('sha512').update(this.transactions[i].toString()).digest().toString('hex'));
         }
         while (true) {
             const newChild = [];
@@ -118,15 +119,15 @@ export class Data {
     /**
      *
      * @date 2019-01-31
-     * @returns {string} data
+     * @returns {[string]} data concated in a string
      * @memberof Data
      */
     getData(): string {
-        let s = '';
+        let data = '';
         for (let i = 0; i < this.transactions.length; i++) {
-            s += this.transactions[i].getData();
+            data += this.transactions[i].getData() + '+';
         }
-        return s;
+        return data;
     }
 }
 
@@ -139,31 +140,31 @@ export class Data {
  */
 export class Transaction {
 
-    sender: string;
-    receiver: string;
+    userId: string;
+    randomHash: string;
     amount: number;
 
     /**
      * Creates an instance of Transaction.
      * @date 2019-01-31
-     * @param {string} sender
-     * @param {string} receiver
-     * @param {number} amount
+     * @param {string} userId the id of the user issuing the transaction
+     * @param {string} randomHash the randomly by every user generate user
+     * @param {number} amount the amount of JitCoins to be betted
      * @memberof Transaction
      */
-    constructor(sender: string, receiver: string, amount: number) {
-        this.sender = sender;
-        this.receiver = receiver;
+    constructor(userId: string, randomHash: string, amount: number) {
+        this.userId = userId;
+        this.randomHash = randomHash;
         this.amount = amount;
     }
 
     /**
      *
      * @date 2019-01-31
-     * @returns {string} data arranged as string
+     * @returns {string} returns the data concated in a string
      * @memberof Transaction
      */
     getData(): string {
-        return this.sender + this.receiver + this.amount;
+        return this.amount + '-' + this.randomHash + '-' + this.userId + '-';
     }
 }
