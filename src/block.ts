@@ -11,21 +11,21 @@ export class Block {
     constructor(previousBlockHash: string | null, data: Data) {
         this.previousBlockHash = previousBlockHash;
         this.data = data;
-        this.hash = "";
+        this.hash = '';
         this.nonce = -1;
         this.merkleTree = data.getMerkleTree();
     }
     
     mine() {
         var i = 0
-        while (this.hash[0] != "0") {
+        while (this.hash[0] != '0') {
             this.hash = createHash('sha512').update(this.data.getData() + i).digest().toString('hex');
-            console.log(this.hash)
+            console.log(this.hash);
             console.log('');
-            i++
+            i++;
         }
-        console.log("found")
-        this.nonce = i
+        console.log('found');
+        this.nonce = i;
     }
 }
 
@@ -68,11 +68,11 @@ export class Data {
     }
 
     getData() {
-        let s: string = ''
+        let s: string = '';
         for (var i = 0; i < this.transactions.length; i++) {
-            s += this.transactions[i].getData()
+            s += this.transactions[i].getData();
         }
-        return s
+        return s;
     }
 }
 
@@ -89,6 +89,6 @@ export class Transaction {
     }
 
     getData() {
-        return this.sender + this.receiver + this.amount
+        return this.sender + this.receiver + this.amount;
     }
 }

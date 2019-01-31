@@ -10,9 +10,9 @@ export class Blockchain {
         this.blocks = [firstBlock];
     }
 
-    addBlock(data: Data){
-      var n_block = new Block(this.blocks[this.blocks.length-1].hash, data)
-      n_block.mine()
-      this.blocks.push(n_block)
+    addBlock(data: Data) {
+        var nBlock = new Block(this.blocks[this.blocks.length - 1].hash, data);
+        nBlock.mine();
+        this.blocks.push(nBlock);
     }
 }
