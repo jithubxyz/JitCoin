@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { stringify } from 'querystring';
+const log = require('single-line-log').stdout;
 
 /**
  *
@@ -17,6 +18,9 @@ export class Block {
     hash: string;
     nonce: number;
 
+    // Debug
+    zeroCount: number;
+
     /**
      * Creates an instance of Block.
      * 
@@ -25,7 +29,10 @@ export class Block {
      * @param {Data} data
      * @memberof Block
      */
-    constructor(previousBlockHash: string | null, data: Data) {
+    constructor(previousBlockHash: string | null, data: Data, zeroCount: number) {
+        // Debug
+        this.zeroCount = zeroCount;
+
         this.previousBlockHash = previousBlockHash;
         this.data = data;
         this.hash = '';
@@ -42,18 +49,28 @@ export class Block {
      */
     mine() {
         console.log('trying to find nonce...');
-        while (this.hash[0] !== '0' || this.hash[1] !== '0' || this.hash[2] !== '0' || this.hash[3] !== '0' || this.hash[4] !== '0') {
+        while (this.hash.substring(0, this.zeroCount) !== this.getZeroString()) {
             this.nonce++;
             this.hash = createHash('sha512').update(this.data.getData() + this.nonce).digest().toString('hex');
+            if(this.nonce % 10000 === 0){
+                log(this.nonce + '. hash: ' + this.hash);
+            }
         }
-        console.log('nonce found! it\'s ' + this.nonce);
+        console.log('\nnonce found! it\'s ' + this.nonce);
         //console.log('the hash is: ' + this.hash);
+    }
+
+    getZeroString(): string {
+        let ret = '';
+        for (let i = 0; i < this.zeroCount; i++) {
+            ret += '0';
+        }
+        return ret;
     }
 
     /**
      *
-     *
-     * @returns 
+     * @returns recalculated block hash
      * @memberof Block
      */
     getBlockHash() {
