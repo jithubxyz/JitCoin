@@ -47,7 +47,7 @@ elapsedTime = Date.now() - beforeExecution;
 
 console.log('mining took ' + elapsedTime / 1000 + ' seconds (' + (elapsedTime / 1000 / 60).toFixed(2) + ' minutes)');
 
-console.log('My hash is: ' + firstBlock.getBlockHash() + '\nI am the second block! The previous has was: ' + secondBlock.previousBlockHash);
+console.log('My hash is: ' + secondBlock.getBlockHash() + '\nI am the second block! The previous has was: ' + secondBlock.previousBlockHash);
 
 function getRandomHash(): string {
     const currentDate = (new Date()).valueOf().toString();

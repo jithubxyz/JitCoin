@@ -42,7 +42,7 @@ export class Block {
      */
     mine() {
         console.log('trying to find nonce...');
-        while (this.hash[0] !== '0' || this.hash[1] !== '0' || this.hash[2] !== '0' || this.hash[3] !== '0'/* || this.hash[4] !== '0'*/) {
+        while (this.hash[0] !== '0' || this.hash[1] !== '0' || this.hash[2] !== '0' || this.hash[3] !== '0' || this.hash[4] !== '0') {
             this.nonce++;
             this.hash = createHash('sha512').update(this.data.getData() + this.nonce).digest().toString('hex');
         }
