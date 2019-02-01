@@ -1,3 +1,5 @@
 {
-  "extends": "gts/tslint.json"
+  "extends": "gts/tslint.json",
+  "quotemark": "single",
+  "trailing-comma": true,
 }

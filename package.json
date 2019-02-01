@@ -2,13 +2,16 @@
   "name": "JitCoin",
   "version": "0.0.1",
   "description": "A JitCoin written in TypeScript.",
-  "main": "index.js",
+  "main": "test.js",
   "repository": "https://github.com/jithubxyz/JitCoin.git",
   "author": "flokol120 <flo@xn--drr-sna.site>",
   "license": "MIT",
   "devDependencies": {
     "@types/node": "^10.12.19",
+    "@types/inquirer": "0.0.43",
     "gts": "^0.9.0",
+    "inquirer": "^6.2.2",
+    "single-line-log": "^1.1.2",
     "typescript": "~3.1.0"
   },
   "scripts": {
