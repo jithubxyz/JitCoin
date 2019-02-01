@@ -1,4 +1,4 @@
-import { Block, Data } from './block';
+import { Block } from './block';
 
 /**
  * 
@@ -26,11 +26,10 @@ export class Blockchain {
     /**
      *
      * @date 2019-01-31
-     * @param {Data} data
+     * @param {Block} block
      * @memberof Blockchain
      */
-    addBlock(data: Data) {
-        const nBlock = new Block(this.blocks[this.blocks.length - 1].hash, data);
-        this.blocks.push(nBlock);
+    addBlock(block: Block) {
+        this.blocks.push(block);
     }
 }

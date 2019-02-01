@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+import { stringify } from 'querystring';
 
 /**
  *
@@ -40,16 +41,23 @@ export class Block {
      * @memberof Block
      */
     mine() {
-        let i = 0;
-        console.log("data: " + this.data.getData().toString());
         console.log('trying to find nonce...');
-        while (this.hash[0] !== '0' || this.hash[1] !== '1' || this.hash[2] !== '2' || this.hash[3] !== '3') {
-            this.hash = createHash('sha512').update(this.data.getData().toString() + i).digest().toString('hex');
-            console.log(this.hash);
-            i++;
+        while (this.hash[0] !== '0' || this.hash[1] !== '0' || this.hash[2] !== '0' || this.hash[3] !== '0' || this.hash[4] !== '0') {
+            this.nonce++;
+            this.hash = createHash('sha512').update(this.data.getData() + this.nonce).digest().toString('hex');
         }
-        console.log('nonce found! it\'s ' + i);
-        this.nonce = i;
+        console.log('nonce found! it\'s ' + this.nonce);
+        //console.log('the hash is: ' + this.hash);
+    }
+
+    /**
+     *
+     *
+     * @returns 
+     * @memberof Block
+     */
+    getBlockHash() {
+        return createHash('sha512').update(this.data.getData() + this.nonce).digest().toString('hex');
     }
 }
 
@@ -123,11 +131,11 @@ export class Data {
      * @memberof Data
      */
     getData(): string {
-        let data = '';
+        const data = [];
         for (let i = 0; i < this.transactions.length; i++) {
-            data += this.transactions[i].getData() + '+';
+            data.push(this.transactions[i].getData());
         }
-        return data;
+        return stringify(data);
     }
 }
 
@@ -161,10 +169,10 @@ export class Transaction {
     /**
      *
      * @date 2019-01-31
-     * @returns {string} returns the data concated in a string
+     * @returns {string} returns stringified data
      * @memberof Transaction
      */
     getData(): string {
-        return this.amount + '-' + this.randomHash + '-' + this.userId + '-';
+        return stringify(this);
     }
 }
