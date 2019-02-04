@@ -1,5 +1,6 @@
 import { createHash } from 'crypto';
 import { stringify } from 'querystring';
+import { saveBinaryHex } from './helper';
 const log = require('single-line-log').stdout;
 
 /**
@@ -58,6 +59,7 @@ export class Block {
         }
         console.log('\nnonce found! it\'s ' + this.nonce);
         //console.log('the hash is: ' + this.hash);
+        this.save();
     }
 
     getZeroString(): string {
@@ -75,6 +77,16 @@ export class Block {
      */
     getBlockHash() {
         return createHash('sha512').update(this.data.getData() + this.nonce).digest().toString('hex');
+    }
+
+
+    /**
+     * saves the block to the disk
+     *
+     * @memberof Block
+     */
+    save() {
+        saveBinaryHex(this.previousBlockHash!!, this.merkleTree, this.nonce, this.data.transactions)
     }
 }
 
