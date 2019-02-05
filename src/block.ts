@@ -58,7 +58,6 @@ export class Block {
             }
         }
         console.log('\nnonce found! it\'s ' + this.nonce);
-        //console.log('the hash is: ' + this.hash);
         this.save();
     }
 

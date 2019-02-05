@@ -1,5 +1,5 @@
 import { writeFileSync } from 'fs';
-import { SAVE_DIR, BLOCK_HEADER, VERSION, BLOCK_BODY, TRANSACTION } from './constants';
+import { SAVE_DIR, BLOCK_HEADER, VERSION, BLOCK_BODY, TRANSACTION, DELIMITER } from './constants';
 import { stringify } from 'querystring';
 import { Transaction } from './block';
 
@@ -15,7 +15,7 @@ export const saveBinaryHex = (previousBlockHash: string, merkleTree: string, non
     let data = '';
 
     // write magic bytes
-    data += Buffer.from('ĴḯŤ').toString('hex');
+    const delimiter = Buffer.from(DELIMITER).toString('utf16le');
 
     // write header
     const header = {
@@ -26,7 +26,11 @@ export const saveBinaryHex = (previousBlockHash: string, merkleTree: string, non
         time: new Date().getTime(), 
     } as BLOCK_HEADER
 
-    data += Buffer.from(stringify(header)).toString('hex');
+    // write header
+    data += Buffer.from(stringify(header)).toString('utf16le');
+
+    // write transaction count
+    data += Buffer.from(transactions.length.toString()).toString('utf16le');
 
     const trans = [];
 
@@ -43,7 +47,12 @@ export const saveBinaryHex = (previousBlockHash: string, merkleTree: string, non
         transactions: trans
     } as BLOCK_BODY
 
-    data += Buffer.from(stringify(body)).toString('hex');
+    // write body
+    data += Buffer.from(stringify(body)).toString('utf16le');
 
-    writeFileSync(SAVE_DIR + '/blk00000.dat', data);
+    const size = data.length;
+    
+    const block = delimiter + size + data;
+
+    writeFileSync(SAVE_DIR + '/blk00000.dat', block);
 }
