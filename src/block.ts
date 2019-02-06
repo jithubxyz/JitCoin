@@ -49,15 +49,18 @@ export class Block {
      */
     mine() {
         console.log('trying to find nonce...');
+        // while substring is not the the amount of entered zeros
         while (this.hash.substring(0, this.zeroCount) !== this.getZeroString()) {
+            // incrementing the nonce | init value is -1
             this.nonce++;
+            // data of the block is being hashed with the nonce
             this.hash = createHash('sha512').update(this.data.getData() + this.nonce).digest().toString('hex');
+            // just some ouptut...
             if(this.nonce % 10000 === 0){
                 log(this.nonce + '. hash: ' + this.hash);
             }
         }
         console.log('\nnonce found! it\'s ' + this.nonce);
-        //console.log('the hash is: ' + this.hash);
     }
 
     getZeroString(): string {
