@@ -85,7 +85,7 @@ export class Block {
      * @memberof Block
      */
     save() {
-        saveBinaryHex(this.previousBlockHash!!, this.merkleTree, this.nonce, this.data.transactions)
+        saveBinaryHex(this.previousBlockHash!!, this.merkleTree, this.nonce, this.data.transactions);
     }
 }
 
