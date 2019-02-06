@@ -24,6 +24,7 @@ let blockchain: Blockchain;
       default: 4,
     },
   ]);
+  // testing the blockchain functionallity: Increasing the amount of starting zeros leads to a massive increase of mining time
   randomBlockChain(results.iterations as number, results.zeros as number);
 })();
 
