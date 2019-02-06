@@ -1,6 +1,6 @@
 import { createHash } from 'crypto';
 import { stringify } from 'querystring';
-import { saveBinaryHex } from './helper';
+import { saveBinaryHex } from '../misc/helper';
 const log = require('single-line-log').stdout;
 
 /**

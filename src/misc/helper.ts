@@ -1,9 +1,6 @@
 import { writeFileSync, statSync, existsSync, mkdirSync, readdirSync, appendFileSync } from 'fs';
 import {
-  BLOCK_HEADER,
   VERSION,
-  BLOCK_BODY,
-  TRANSACTION,
   DELIMITER,
   BLOCKCHAIN_DIR,
   JITCOIN_DIR,
@@ -12,7 +9,8 @@ import {
   JITCOIN_FILE_ZEROS,
 } from './constants';
 import { stringify } from 'querystring';
-import { Transaction } from './block';
+import { Transaction } from '../jitcoin/block';
+import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
 
 /**
  *
@@ -43,7 +41,7 @@ export const saveBinaryHex = (
     merkleTree,
     nonce,
     time: new Date().getTime(),
-  } as BLOCK_HEADER;
+  } as BlockHeader;
 
   // write header
   const headerHex = Buffer.from(stringify(header)).toString('hex');
@@ -61,14 +59,14 @@ export const saveBinaryHex = (
         amount: transaction.amount,
         randomHash: transaction.randomHash,
         userId: transaction.userId,
-      } as TRANSACTION)).toString('utf8'),
+      } as TransactionElement)).toString('utf8'),
     );
   }
 
   // write body
   const body = {
     transactions: trans,
-  } as BLOCK_BODY;
+  } as BlockBody;
 
   // write body
   const bodyHex = Buffer.from(stringify(body)).toString('hex');
