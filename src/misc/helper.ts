@@ -7,6 +7,8 @@ import {
   JITCOIN_FILE,
   MAX_FILE_SIZE,
   JITCOIN_FILE_ZEROS,
+  JITCOIN_FILE_STARTER,
+  JITCOIN_FILE_ENDING,
 } from './constants';
 import { stringify } from 'querystring';
 import { Transaction } from '../jitcoin/block';
@@ -121,7 +123,7 @@ const getJitCoinFile = (): string => {
   if (getFilesize(currentFile) <= MAX_FILE_SIZE) {
     return currentFile;
   } else {
-    const file = BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(files.length));
+    const file = BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(getLastFileCount(files) + 1));
     writeFileSync(file, '');
     return file;
   }
@@ -134,5 +136,15 @@ const getJitCoinFile = (): string => {
  * @returns {string} name of file
  */
 const appendZeros = (nmbr: number): string => {
-  return nmbr.toString().padStart(JITCOIN_FILE_ZEROS - nmbr.toString().length, '0');
+  return nmbr.toString().padStart(JITCOIN_FILE_ZEROS, '0');
+};
+
+/**
+ *
+ * @author Flo Dörr
+ * @param {string[]} files
+ * @returns {number}
+ */
+const getLastFileCount = (files: string[]): number => {
+  return +files[files.length - 1].replace(JITCOIN_FILE_STARTER, '').replace(JITCOIN_FILE_ENDING, '');
 };

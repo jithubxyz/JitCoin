@@ -9,7 +9,11 @@ export const JITCOIN_DIR = './.jitcoin';
 
 export const BLOCKCHAIN_DIR = './.jitcoin/blockchain';
 
-export const JITCOIN_FILE = 'blk$.jit';
+export const JITCOIN_FILE_STARTER = 'blk';
+
+export const JITCOIN_FILE_ENDING = '.jit';
+
+export const JITCOIN_FILE = `${JITCOIN_FILE_STARTER}$${JITCOIN_FILE_ENDING}`;
 
 export const JITCOIN_FILE_ZEROS = 8;
 
