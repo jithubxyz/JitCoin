@@ -7,7 +7,6 @@ const log = require('single-line-log').stdout;
 
 /**
  *
- *
  * @author Eleftherios Pavlidis, Flo Dörr
  * @date 2019-01-31
  * @export
