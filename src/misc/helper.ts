@@ -97,10 +97,10 @@ const getFilesize = (filename: string): number => {
  * @author Flo Dörr
  */
 const createDir = () => {
-  if(!existsSync(JITCOIN_DIR)){
+  if (!existsSync(JITCOIN_DIR)) {
     mkdirSync(JITCOIN_DIR);
   }
-  if(!existsSync(BLOCKCHAIN_DIR)){
+  if (!existsSync(BLOCKCHAIN_DIR)) {
     mkdirSync(BLOCKCHAIN_DIR);
   }
 };
@@ -112,15 +112,15 @@ const createDir = () => {
  */
 const getJitCoinFile = (): string => {
   const files = readdirSync(BLOCKCHAIN_DIR);
-  if(files.length === 0){
+  if (files.length === 0) {
     const file = BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(0));
     writeFileSync(file, '');
-    return(file);
+    return (file);
   }
   const currentFile = BLOCKCHAIN_DIR + '/' + files[files.length - 1];
-  if(getFilesize(currentFile) <= MAX_FILE_SIZE){
+  if (getFilesize(currentFile) <= MAX_FILE_SIZE) {
     return currentFile;
-  }else{
+  } else {
     const file = BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(files.length));
     writeFileSync(file, '');
     return file;
@@ -134,9 +134,5 @@ const getJitCoinFile = (): string => {
  * @returns {string} name of file
  */
 const appendZeros = (nmbr: number): string => {
-  let file = '';
-  for(let i = 0; i < JITCOIN_FILE_ZEROS - nmbr.toString().length; i++){
-    file += '0';
-  }
-  return file + nmbr.toString();
+  return nmbr.toString().padStart(JITCOIN_FILE_ZEROS - nmbr.toString().length, '0');
 };
