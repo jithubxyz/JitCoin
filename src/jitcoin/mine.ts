@@ -10,7 +10,6 @@ if(process !== undefined){
         const zeroCount = message.zeroCount;
         let hash = '';
         const workerNumber = message.startingNonce as number;
-        let iteration = 0
         while (hash.substring(0, zeroCount) !== getZeroString(zeroCount)) {
           // incrementing the nonce | init value is -1
           nonce += steps;
@@ -31,9 +30,5 @@ if(process !== undefined){
 }
 
 const getZeroString = (zeroCount: number): string => {
-  let ret = '';
-  for (let i = 0; i < zeroCount; i++) {
-    ret += '0';
-  }
-  return ret;
+  return ''.padEnd(zeroCount, '0');
 };

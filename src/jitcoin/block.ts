@@ -96,11 +96,7 @@ export class Block {
   }
 
   getZeroString(): string {
-    let ret = '';
-    for (let i = 0; i < this.zeroCount; i++) {
-      ret += '0';
-    }
-    return ret;
+    return ''.padEnd(this.zeroCount, '0');
   }
 
   /**

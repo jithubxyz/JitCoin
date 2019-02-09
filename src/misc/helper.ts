@@ -99,10 +99,10 @@ const getFilesize = (filename: string): number => {
  * @author Flo Dörr
  */
 const createDir = () => {
-  if(!existsSync(JITCOIN_DIR)){
+  if (!existsSync(JITCOIN_DIR)) {
     mkdirSync(JITCOIN_DIR);
   }
-  if(!existsSync(BLOCKCHAIN_DIR)){
+  if (!existsSync(BLOCKCHAIN_DIR)) {
     mkdirSync(BLOCKCHAIN_DIR);
   }
 };
