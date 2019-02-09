@@ -1,5 +1,5 @@
-import { Blockchain } from './blockchain';
-import { Block, Data, Transaction } from './block';
+import { Blockchain } from './jitcoin/blockchain';
+import { Block, Data, Transaction } from './jitcoin/block';
 import { createHash } from 'crypto';
 import { prompt } from 'inquirer';
 
