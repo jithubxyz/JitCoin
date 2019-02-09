@@ -1,4 +1,5 @@
 import { createHash } from 'crypto';
+const log = require('single-line-log').stdout;
 
 if(process !== undefined){
     process.on('message', async (message: any) => {
@@ -8,6 +9,8 @@ if(process !== undefined){
         const data = message.data;
         const zeroCount = message.zeroCount;
         let hash = '';
+        const workerNumber = message.startingNonce as number;
+        let iteration = 0
         while (hash.substring(0, zeroCount) !== getZeroString(zeroCount)) {
           // incrementing the nonce | init value is -1
           nonce += steps;
@@ -18,9 +21,9 @@ if(process !== undefined){
             .digest()
             .toString('hex');
           // just some ouptut...
-          /*if (nonce % 10000 === 0) {
-            log(nonce + '. hash: ' + hash);
-          }*/
+          if (workerNumber === 0 && nonce % 500000 === 0) {
+            log(nonce + '. hash: ' + hash + 'from worker nr. ' + workerNumber);
+          }
         }
         console.log('nonce found! It\'s ' + nonce);
         process.send({ nonce, hash });

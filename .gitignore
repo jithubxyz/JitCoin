@@ -65,3 +65,6 @@ package-lock.json
 
 # build folder
 build/
+
+# jitcoin files
+.jitcoin/
