@@ -66,5 +66,5 @@ package-lock.json
 # build folder
 build/
 
-# blockchain files
+# jitcoin files
 .jitcoin/

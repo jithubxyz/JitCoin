@@ -36,10 +36,14 @@ function getRandomHash(): string {
     .digest('hex');
 }
 
-function randomBlockChain(blockCount: number, zeroCount: number) {
+async function randomBlockChain(blockCount: number, zeroCount: number) {
   beforeExecution = Date.now();
 
-  const firstBlock = new Block(null, getRandomData(), zeroCount);
+  const data = getRandomData();
+
+  const firstBlock = new Block(null, data, zeroCount);
+
+  await firstBlock.mine();
 
   elapsedTime = Date.now() - beforeExecution;
 
@@ -61,10 +65,34 @@ function randomBlockChain(blockCount: number, zeroCount: number) {
 
   blockchain = new Blockchain(firstBlock);
 
+  /*beforeExecution = Date.now();
+
+  const firstBlockOld = new Block(null, data, zeroCount);
+
+  firstBlockOld.mineOld();
+
+  elapsedTime = Date.now() - beforeExecution;
+
+  console.log(
+    'mining took ' +
+      elapsedTime / 1000 +
+      ' seconds (' +
+      (elapsedTime / 1000 / 60).toFixed(2) +
+      ' minutes)',
+  );
+
+  console.log(
+    'My hash is: ' + firstBlockOld.getBlockHash() + '\nI am the first block!',
+  );
+
+  console.log(
+    '____________________________________________________________________________________________________________________________________________',
+  );*/
+
   followingBlocks(blockCount, zeroCount);
 }
 
-function followingBlocks(blockCount: number, zeroCount: number) {
+async function followingBlocks(blockCount: number, zeroCount: number) {
   for (let i = 0; i < blockCount - 1; i++) {
     beforeExecution = Date.now();
 
@@ -73,6 +101,8 @@ function followingBlocks(blockCount: number, zeroCount: number) {
       getRandomData(),
       zeroCount,
     );
+
+    await block.mine();
 
     blockchain.addBlock(block);
 
