@@ -2,6 +2,7 @@ import { Blockchain } from './jitcoin/blockchain';
 import { Block, Data, Transaction } from './jitcoin/block';
 import { createHash } from 'crypto';
 import { prompt } from 'inquirer';
+import { getBlockHash } from './misc/helper';
 
 let beforeExecution;
 
@@ -56,7 +57,7 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
   );
 
   console.log(
-    'My hash is: ' + firstBlock.getBlockHash() + '\nI am the first block!',
+    'My hash is: ' + getBlockHash(firstBlock.data.getData(), firstBlock.nonce) + '\nI am the first block!',
   );
 
   console.log(
@@ -97,7 +98,7 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
     beforeExecution = Date.now();
 
     const block = new Block(
-      blockchain.blocks[blockchain.blocks.length - 1].getBlockHash(),
+      getBlockHash(blockchain.blocks[blockchain.blocks.length - 1].data.getData(), blockchain.blocks[blockchain.blocks.length - 1].nonce),
       getRandomData(),
       zeroCount,
     );
@@ -118,11 +119,11 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 
     console.log(
       'My hash is: ' +
-        block.getBlockHash() +
+       getBlockHash(block.data.getData(), block.nonce) +
         '\nI am the ' +
         (i + 2) +
         '. block! The previous hash was: ' +
-        blockchain.blocks[blockchain.blocks.length - 2].getBlockHash(),
+        getBlockHash(blockchain.blocks[blockchain.blocks.length - 2].data.getData(), blockchain.blocks[blockchain.blocks.length - 2].nonce),
     );
 
     console.log(

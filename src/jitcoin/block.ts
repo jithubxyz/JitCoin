@@ -1,9 +1,9 @@
-import { createHash } from 'crypto';
 import { stringify } from 'querystring';
-import { saveBinaryHex } from '../misc/helper';
+import { saveBinaryHex, getBlockHash } from '../misc/helper';
 import { fork, ChildProcess } from 'child_process';
 import { cpus } from 'os';
-const log = require('single-line-log').stdout;
+import { stdout as log } from 'single-line-log';
+import { join } from 'path';
 
 /**
  *
@@ -48,13 +48,12 @@ export class Block {
    * @memberof Block
    */
   async mine() {
-    return new Promise((resolve, reject) => {
+    return new Promise(resolve => {
       const threads = cpus().length;
-      console.log('trying to find nonce... with ' + threads + ' workers...');
-      const workers = new Array<ChildProcess>(threads);
+      console.log(`trying to find nonce... with ${threads} workers...`);
+      const workers: ChildProcess[] = [];
       for (let i = 0; i < threads; i++) {
-        const thread = fork(__dirname + '/mine.js');
-        thread.unref();
+        const thread = fork(join(__dirname, 'mine.js'));
         workers.push(thread);
         thread.send({
           startingNonce: i,
@@ -73,7 +72,7 @@ export class Block {
           this.save();
           resolve(this.hash);
         });
-        console.log('added thread nr. ' + i);
+        console.log(`added thread nr. ${i}`);
       }
     });
   }
@@ -83,10 +82,7 @@ export class Block {
       // incrementing the nonce | init value is -1
       this.nonce++;
       // data of the block is being hashed with the nonce
-      this.hash = createHash('sha512')
-        .update(this.data.getData() + this.nonce)
-        .digest()
-        .toString('hex');
+      this.hash = getBlockHash(this.data.getData(), this.nonce);
       // just some ouptut...
       if (this.nonce % 10000 === 0) {
         log(this.nonce + '. hash: ' + this.hash);
@@ -97,18 +93,6 @@ export class Block {
 
   getZeroString(): string {
     return ''.padEnd(this.zeroCount, '0');
-  }
-
-  /**
-   *
-   * @returns recalculated block hash
-   * @memberof Block
-   */
-  getBlockHash() {
-    return createHash('sha512')
-      .update(this.data.getData() + this.nonce)
-      .digest()
-      .toString('hex');
   }
 
   /**
@@ -165,12 +149,7 @@ export class Data {
   getMerkleTree(): string {
     let childs = [];
     for (let i = 0; i < this.transactions.length; i++) {
-      childs.push(
-        createHash('sha512')
-          .update(this.transactions[i].toString())
-          .digest()
-          .toString('hex'),
-      );
+      childs.push(getBlockHash(this.transactions[i].toString()));
     }
     while (true) {
       const newChild = [];
@@ -179,28 +158,13 @@ export class Data {
       }
       if (childs.length % 2 === 0) {
         for (let i = 0; i < childs.length / 2; i++) {
-          newChild.push(
-            createHash('sha512')
-              .update(childs[i * 2] + childs[i * 2 + 1])
-              .digest()
-              .toString('hex'),
-          );
+          newChild.push(getBlockHash(childs[i * 2] + childs[i * 2 + 1]));
         }
       } else {
         for (let i = 0; i < Math.floor(childs.length / 2); i++) {
-          newChild.push(
-            createHash('sha512')
-              .update(childs[i * 2] + childs[i * 2 + 1])
-              .digest()
-              .toString('hex'),
-          );
+          newChild.push(getBlockHash(childs[i * 2] + childs[i * 2 + 1]));
         }
-        newChild.push(
-          createHash('sha512')
-            .update(childs[childs.length - 1])
-            .digest()
-            .toString('hex'),
-        );
+        newChild.push(getBlockHash(childs[childs.length - 1]));
       }
       childs = newChild;
     }
