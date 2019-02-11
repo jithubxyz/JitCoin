@@ -20,3 +20,10 @@ export interface TransactionElement {
     randomHash: string;
     amount: number;
 }
+
+export interface MiningChild {
+    startingNonce: number;
+    data: string;
+    steps: number;
+    zeroCount: number;
+}

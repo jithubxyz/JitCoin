@@ -13,6 +13,7 @@ import {
 import { stringify } from 'querystring';
 import { Transaction } from '../jitcoin/block';
 import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
+import { createHash } from 'crypto';
 
 /**
  *
@@ -147,4 +148,16 @@ const appendZeros = (nmbr: number): string => {
  */
 const getLastFileCount = (files: string[]): number => {
   return +files[files.length - 1].replace(JITCOIN_FILE_STARTER, '').replace(JITCOIN_FILE_ENDING, '');
+};
+
+/**
+ *
+ * @returns recalculated block hash
+ * @memberof Block
+ */
+export const getBlockHash = (data: string, nonce?: number): string => {
+  return createHash('sha512')
+    .update(`${data}${nonce ? nonce : ''}`)
+    .digest()
+    .toString('hex');
 };
