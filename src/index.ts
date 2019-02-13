@@ -2,7 +2,7 @@ import * as express from 'express';
 import { PORT } from './misc/constants';
 const app = express();
 
-app.post('/', express.json(), async (req, res) => {
+app.post('/mine', express.json(), async (req, res) => {
     const amount = req.body.amount;
     res.send(req.body.test);
 

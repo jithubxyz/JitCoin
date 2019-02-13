@@ -26,7 +26,7 @@ let blockchain: Blockchain;
     },
   ]);
   // testing the blockchain functionallity: Increasing the amount of starting zeros leads to a massive increase of mining time
-  await randomBlockChain(results.iterations as number, results.zeros as number);
+  //await randomBlockChain(results.iterations as number, results.zeros as number);
 })();
 
 function getRandomHash(): string {

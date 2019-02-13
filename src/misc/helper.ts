@@ -1,4 +1,4 @@
-import { pathExists, writeFile, stat, mkdirp, appendFile, Stats, readdir } from 'fs-extra';
+import { pathExists, writeFile, stat, mkdirp, appendFile, Stats, readdir, readFile } from 'fs-extra';
 import {
   VERSION,
   DELIMITER,
@@ -11,12 +11,13 @@ import {
   JITCOIN_FILE_ENDING,
 } from './constants';
 import { stringify } from 'querystring';
-import { Transaction } from '../jitcoin/block';
+import { Transaction, Block } from '../jitcoin/block';
 import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
 import { createHash } from 'crypto';
 import { promisify } from 'util';
 
 const write = promisify(writeFile);
+const read = promisify(readFile);
 const readDir = (path: string): Promise<string[]> => new Promise((resolve, reject) => {
   readdir(path, (err, files) => {
     if (err) {
@@ -112,6 +113,18 @@ export const saveBinaryHex = (
   });
 };
 
+const getLastBlock = (): Promise<Block | null> => {
+  return new Promise(async resolve => {
+    if (jitcoinPathExists) {
+      const file = await getJitCoinFile();
+      const data = await read(JITCOIN_DIR + '/' + file);
+      console.log(data);
+    } else {
+      resolve(null);
+    }
+  });
+};
+
 /**
  *
  * @author Flo Dörr
@@ -135,6 +148,10 @@ const createDir = async () => {
   if (!await pathExists(BLOCKCHAIN_DIR)) {
     await mkdirp(BLOCKCHAIN_DIR);
   }
+};
+
+const jitcoinPathExists = async () => {
+  return (await pathExists(JITCOIN_DIR)) && (await pathExists(BLOCKCHAIN_DIR));
 };
 
 /**
