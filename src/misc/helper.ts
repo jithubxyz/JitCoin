@@ -132,7 +132,7 @@ const createDir = async () => {
   if (!(await pathExists(JITCOIN_DIR))) {
     await mkdirp(JITCOIN_DIR);
   }
-  if (!await pathExists(BLOCKCHAIN_DIR)) {
+  if (!(await pathExists(BLOCKCHAIN_DIR))) {
     await mkdirp(BLOCKCHAIN_DIR);
   }
 };
