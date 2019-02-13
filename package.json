@@ -7,8 +7,9 @@
   "author": "flokol120 <flo@xn--drr-sna.site>",
   "license": "MIT",
   "devDependencies": {
-    "@types/node": "^10.12.19",
+    "@types/fs-extra": "^5.0.5",
     "@types/inquirer": "0.0.43",
+    "@types/node": "^10.12.19",
     "gts": "^0.9.0",
     "inquirer": "^6.2.2",
     "single-line-log": "^1.1.2",
@@ -23,5 +24,7 @@
     "pretest": "npm run compile",
     "posttest": "npm run check"
   },
-  "dependencies": {}
+  "dependencies": {
+    "fs-extra": "^7.0.1"
+  }
 }
