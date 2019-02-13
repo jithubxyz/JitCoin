@@ -23,3 +23,7 @@ export const MAX_FILE_SIZE = 300000;
 
 // uncommon string to delimit the blocks
 export const DELIMITER = 'ĴḯŤ';
+
+// express constants
+
+export const PORT = 7179;
