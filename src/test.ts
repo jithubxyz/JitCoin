@@ -2,7 +2,7 @@ import { Blockchain } from './jitcoin/blockchain';
 import { Block, Data, Transaction } from './jitcoin/block';
 import { createHash } from 'crypto';
 import { prompt } from 'inquirer';
-import { getBlockHash } from './misc/helper';
+import { getBlockHash, getLastBlock } from './misc/helper';
 
 let beforeExecution;
 
@@ -27,6 +27,7 @@ let blockchain: Blockchain;
   ]);
   // testing the blockchain functionallity: Increasing the amount of starting zeros leads to a massive increase of mining time
   //await randomBlockChain(results.iterations as number, results.zeros as number);
+  await getLastBlock();
 })();
 
 function getRandomHash(): string {
@@ -50,14 +51,16 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
   console.log(
     'mining took ' +
-    elapsedTime / 1000 +
-    ' seconds (' +
-    (elapsedTime / 1000 / 60).toFixed(2) +
-    ' minutes)',
+      elapsedTime / 1000 +
+      ' seconds (' +
+      (elapsedTime / 1000 / 60).toFixed(2) +
+      ' minutes)',
   );
 
   console.log(
-    'My hash is: ' + getBlockHash(firstBlock.data.getData(), firstBlock.nonce) + '\nI am the first block!',
+    'My hash is: ' +
+      getBlockHash(firstBlock.data.getData(), firstBlock.nonce) +
+      '\nI am the first block!',
   );
 
   console.log(
@@ -98,7 +101,10 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
     beforeExecution = Date.now();
 
     const block = new Block(
-      getBlockHash(blockchain.blocks[blockchain.blocks.length - 1].data.getData(), blockchain.blocks[blockchain.blocks.length - 1].nonce),
+      getBlockHash(
+        blockchain.blocks[blockchain.blocks.length - 1].data.getData(),
+        blockchain.blocks[blockchain.blocks.length - 1].nonce,
+      ),
       getRandomData(),
       zeroCount,
     );
@@ -111,19 +117,22 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 
     console.log(
       'mining took ' +
-      elapsedTime / 1000 +
-      ' seconds (' +
-      (elapsedTime / 1000 / 60).toFixed(2) +
-      ' minutes)',
+        elapsedTime / 1000 +
+        ' seconds (' +
+        (elapsedTime / 1000 / 60).toFixed(2) +
+        ' minutes)',
     );
 
     console.log(
       'My hash is: ' +
-      getBlockHash(block.data.getData(), block.nonce) +
-      '\nI am the ' +
-      (i + 2) +
-      '. block! The previous hash was: ' +
-      getBlockHash(blockchain.blocks[blockchain.blocks.length - 2].data.getData(), blockchain.blocks[blockchain.blocks.length - 2].nonce),
+        getBlockHash(block.data.getData(), block.nonce) +
+        '\nI am the ' +
+        (i + 2) +
+        '. block! The previous hash was: ' +
+        getBlockHash(
+          blockchain.blocks[blockchain.blocks.length - 2].data.getData(),
+          blockchain.blocks[blockchain.blocks.length - 2].nonce,
+        ),
     );
 
     console.log(

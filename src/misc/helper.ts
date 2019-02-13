@@ -1,4 +1,13 @@
-import { pathExists, writeFile, stat, mkdirp, appendFile, Stats, readdir, readFile } from 'fs-extra';
+import {
+  pathExists,
+  writeFile,
+  stat,
+  mkdirp,
+  appendFile,
+  Stats,
+  readdir,
+  readFile,
+} from 'fs-extra';
 import {
   VERSION,
   DELIMITER,
@@ -15,33 +24,61 @@ import { Transaction, Block } from '../jitcoin/block';
 import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
 import { createHash } from 'crypto';
 import { promisify } from 'util';
+import { deflate, inflate, inflateSync, deflateSync } from 'zlib';
 
 const write = promisify(writeFile);
 const read = promisify(readFile);
-const readDir = (path: string): Promise<string[]> => new Promise((resolve, reject) => {
-  readdir(path, (err, files) => {
-    if (err) {
-      reject(err);
-    }
-    resolve(files);
+const readDir = (path: string): Promise<string[]> =>
+  new Promise((resolve, reject) => {
+    readdir(path, (err, files) => {
+      if (err) {
+        reject(err);
+      }
+      resolve(files);
+    });
   });
-});
-const stats = (path: string): Promise<Stats> => new Promise((resolve, reject) => {
-  stat(path, (err, stats) => {
-    if (err) {
-      reject(err);
-    }
-    resolve(stats);
+const stats = (path: string): Promise<Stats> =>
+  new Promise((resolve, reject) => {
+    stat(path, (err, stats) => {
+      if (err) {
+        reject(err);
+      }
+      resolve(stats);
+    });
   });
-});
-const append = (path: string, data: string, options: { encoding: string }): Promise<Stats> => new Promise((resolve, reject) => {
-  appendFile(path, data, options, (err) => {
-    if (err) {
-      reject(err);
-    }
-    resolve();
+const compress = (buffer: Buffer): Promise<Buffer> => {
+  return new Promise((resolve, reject) => {
+    deflate(buffer, (err, result) => {
+      if (err) {
+        reject(err);
+      }
+      resolve(result);
+    });
   });
-});
+};
+const decompress = (buffer: Buffer): Promise<Buffer> => {
+  return new Promise((resolve, reject) => {
+    inflate(buffer, (err, result) => {
+      if (err) {
+        reject(err);
+      }
+      resolve(result);
+    });
+  });
+};
+const append = (
+  path: string,
+  data: string | Buffer,
+  options: { encoding: string },
+): Promise<Stats> =>
+  new Promise((resolve, reject) => {
+    appendFile(path, data, options, err => {
+      if (err) {
+        reject(err);
+      }
+      resolve();
+    });
+  });
 
 /**
  *
@@ -62,9 +99,6 @@ export const saveBinaryHex = (
 
     const file = await getJitCoinFile();
 
-    // write magic bytes
-    const delimiterHex = Buffer.from(DELIMITER).toString('hex');
-
     // write header
     const header = {
       version: VERSION,
@@ -74,23 +108,21 @@ export const saveBinaryHex = (
       time: new Date().getTime(),
     } as BlockHeader;
 
-    // write header
-    const headerHex = Buffer.from(stringify(header)).toString('hex');
-
-    // write transaction count
-    const lengthHex = Buffer.from(transactions.length.toString()).toString(
-      'hex',
+    const headerCompressed = await compress(
+      Buffer.from(JSON.stringify(header), 'utf8'),
     );
+
+    const headerSize = headerCompressed.byteLength;
 
     const trans = new Array<string>();
 
     for (const transaction of transactions) {
       trans.push(
-        Buffer.from(stringify({
+        JSON.stringify({
           amount: transaction.amount,
           randomHash: transaction.randomHash,
           userId: transaction.userId,
-        } as TransactionElement)).toString('utf8'),
+        } as TransactionElement),
       );
     }
 
@@ -99,26 +131,85 @@ export const saveBinaryHex = (
       transactions: trans,
     } as BlockBody;
 
-    // write body
-    const bodyHex = Buffer.from(stringify(body)).toString('hex');
+    const bodyCompressed = await compress(
+      Buffer.from(JSON.stringify(body), 'utf8'),
+    );
 
-    const sizeHex = Buffer.from(
-      '' + (headerHex.length + lengthHex.length + bodyHex.length),
-    ).toString('hex');
+    const bodySize = bodyCompressed.byteLength;
 
-    const data = delimiterHex + sizeHex + headerHex + lengthHex + bodyHex;
+    //await appendFile(file, DELIMITER);
+    await appendFile(file, headerSize);
+    await appendFile(file, headerCompressed);
+    //await appendFile(file, bodySize);
+    //await appendFile(file, bodyCompressed);
+    // just for Bruno
+    const data = `${DELIMITER}${headerSize}${headerCompressed}${bodySize}${bodyCompressed}`;
 
-    await append(file, data, { encoding: 'hex' });
+    //await append(file, data, { encoding: 'utf8' });
+    //await append(file, headerCompressed, { encoding: 'utf8' });
     resolve();
   });
 };
 
-const getLastBlock = (): Promise<Block | null> => {
+export const getLastBlock = (): Promise<Block | null> => {
   return new Promise(async resolve => {
     if (jitcoinPathExists) {
       const file = await getJitCoinFile();
-      const data = await read(JITCOIN_DIR + '/' + file);
-      console.log(data);
+      //const data: string = ((await read(file)) as Buffer).toString('utf8');
+      const data: Buffer = (await read(file)) as Buffer;
+
+      const pos = data.slice(
+        data.indexOf('x', undefined, 'utf8'),
+        data.byteLength,
+      );
+
+      /*const delimiterPostion = data.lastIndexOf(DELIMITER, undefined, 'utf8');
+
+      const header = data.slice(
+        delimiterPostion + Buffer.from(DELIMITER).byteLength,
+        data.byteLength,
+      );
+
+      const headerSize = header.slice(
+        0,
+        header.indexOf('x', undefined, 'utf8'),
+      );
+
+      const headerCompressed = header.slice(
+        headerSize.byteLength,
+        +headerSize.toString('utf8'),
+      );
+
+      console.log(delimiterPostion);
+      //console.log(header.toString('utf8'));
+      console.log(headerSize.toString('utf8'));
+      console.log('__________________________');
+      console.log(headerCompressed.toString('utf8'));*/
+
+      console.log((await decompress(pos)).toString('utf8'));
+
+      /*const lastBlock = data.substring(
+        data.lastIndexOf(DELIMITER) + DELIMITER.length,
+        data.length,
+      );
+      const headOffset = lastBlock.indexOf('x');
+      const headerSize: number = +lastBlock.substring(0, headOffset);
+      const headerCompressed = lastBlock.substring(
+        headOffset + 1,
+        headOffset + headerSize - 1,
+      );
+      console.log(headerSize);
+      console.log(await decompress(Buffer.from(headerCompressed)));
+      console.log('______________________________');
+      console.log(
+        lastBlock.substring(headOffset + headerSize + 1, lastBlock.length),
+      );*/
+      //console.log(data.toString('utf8'));
+
+      //console.log(inflateSync(data).toString('utf8'));
+
+      //const bodySize: number = +lastBlock.substring(headOffset + headerSize, )
+      resolve(null);
     } else {
       resolve(null);
     }
@@ -145,7 +236,7 @@ const createDir = async () => {
   if (!(await pathExists(JITCOIN_DIR))) {
     await mkdirp(JITCOIN_DIR);
   }
-  if (!await pathExists(BLOCKCHAIN_DIR)) {
+  if (!(await pathExists(BLOCKCHAIN_DIR))) {
     await mkdirp(BLOCKCHAIN_DIR);
   }
 };
@@ -162,15 +253,19 @@ const jitcoinPathExists = async () => {
 const getJitCoinFile = async (): Promise<string> => {
   const files = await readDir(BLOCKCHAIN_DIR);
   if (files.length === 0) {
-    const file = BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(0));
+    const file =
+      BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(0));
     await write(file, '');
     return file;
   }
   const currentFile = BLOCKCHAIN_DIR + '/' + files[files.length - 1];
-  if (await getFilesize(currentFile) <= MAX_FILE_SIZE) {
+  if ((await getFilesize(currentFile)) <= MAX_FILE_SIZE) {
     return currentFile;
   } else {
-    const file = BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(getLastFileCount(files) + 1));
+    const file =
+      BLOCKCHAIN_DIR +
+      '/' +
+      JITCOIN_FILE.replace('$', appendZeros(getLastFileCount(files) + 1));
     await write(file, '');
     return file;
   }
@@ -193,7 +288,9 @@ const appendZeros = (nmbr: number): string => {
  * @returns {number}
  */
 const getLastFileCount = (files: string[]): number => {
-  return +files[files.length - 1].replace(JITCOIN_FILE_STARTER, '').replace(JITCOIN_FILE_ENDING, '');
+  return +files[files.length - 1]
+    .replace(JITCOIN_FILE_STARTER, '')
+    .replace(JITCOIN_FILE_ENDING, '');
 };
 
 /**

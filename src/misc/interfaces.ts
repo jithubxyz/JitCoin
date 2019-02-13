@@ -4,26 +4,26 @@
  */
 
 export interface BlockHeader {
-    version: number;
-    previousBlockHash: string;
-    merkleTree: string;
-    time: number;
-    nonce: number;
+  version: number;
+  previousBlockHash: string;
+  merkleTree: string;
+  time: number;
+  nonce: number;
 }
 
 export interface BlockBody {
-    transactions: [string];
+  transactions: [string];
 }
 
 export interface TransactionElement {
-    userId: string;
-    randomHash: string;
-    amount: number;
+  userId: string;
+  randomHash: string;
+  amount: number;
 }
 
 export interface MiningChild {
-    startingNonce: number;
-    data: string;
-    steps: number;
-    zeroCount: number;
+  startingNonce: number;
+  data: string;
+  steps: number;
+  zeroCount: number;
 }
