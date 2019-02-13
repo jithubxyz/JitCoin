@@ -1,4 +1,4 @@
-import { writeFileSync, statSync, existsSync, mkdirSync, readdirSync, appendFileSync } from 'fs';
+import { pathExists, writeFile, stat, mkdirp, appendFile, Stats, readdir } from 'fs-extra';
 import {
   VERSION,
   DELIMITER,
@@ -14,6 +14,33 @@ import { stringify } from 'querystring';
 import { Transaction } from '../jitcoin/block';
 import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
 import { createHash } from 'crypto';
+import { promisify } from 'util';
+
+const write = promisify(writeFile);
+const readDir = (path: string): Promise<string[]> => new Promise((resolve, reject) => {
+  readdir(path, (err, files) => {
+    if (err) {
+      reject(err);
+    }
+    resolve(files);
+  });
+});
+const stats = (path: string): Promise<Stats> => new Promise((resolve, reject) => {
+  stat(path, (err, stats) => {
+    if (err) {
+      reject(err);
+    }
+    resolve(stats);
+  });
+});
+const append = (path: string, data: string, options: { encoding: string }): Promise<Stats> => new Promise((resolve, reject) => {
+  appendFile(path, data, options, (err) => {
+    if (err) {
+      reject(err);
+    }
+    resolve();
+  });
+});
 
 /**
  *
@@ -29,58 +56,60 @@ export const saveBinaryHex = (
   nonce: number,
   transactions: Transaction[],
 ) => {
+  return new Promise(async resolve => {
+    createDir();
 
-  createDir();
+    const file = await getJitCoinFile();
 
-  const file = getJitCoinFile();
+    // write magic bytes
+    const delimiterHex = Buffer.from(DELIMITER).toString('hex');
 
-  // write magic bytes
-  const delimiterHex = Buffer.from(DELIMITER).toString('hex');
+    // write header
+    const header = {
+      version: VERSION,
+      previousBlockHash,
+      merkleTree,
+      nonce,
+      time: new Date().getTime(),
+    } as BlockHeader;
 
-  // write header
-  const header = {
-    version: VERSION,
-    previousBlockHash,
-    merkleTree,
-    nonce,
-    time: new Date().getTime(),
-  } as BlockHeader;
+    // write header
+    const headerHex = Buffer.from(stringify(header)).toString('hex');
 
-  // write header
-  const headerHex = Buffer.from(stringify(header)).toString('hex');
-
-  // write transaction count
-  const lengthHex = Buffer.from(transactions.length.toString()).toString(
-    'hex',
-  );
-
-  const trans = new Array<string>();
-
-  for (const transaction of transactions) {
-    trans.push(
-      Buffer.from(stringify({
-        amount: transaction.amount,
-        randomHash: transaction.randomHash,
-        userId: transaction.userId,
-      } as TransactionElement)).toString('utf8'),
+    // write transaction count
+    const lengthHex = Buffer.from(transactions.length.toString()).toString(
+      'hex',
     );
-  }
 
-  // write body
-  const body = {
-    transactions: trans,
-  } as BlockBody;
+    const trans = new Array<string>();
 
-  // write body
-  const bodyHex = Buffer.from(stringify(body)).toString('hex');
+    for (const transaction of transactions) {
+      trans.push(
+        Buffer.from(stringify({
+          amount: transaction.amount,
+          randomHash: transaction.randomHash,
+          userId: transaction.userId,
+        } as TransactionElement)).toString('utf8'),
+      );
+    }
 
-  const sizeHex = Buffer.from(
-    '' + (headerHex.length + lengthHex.length + bodyHex.length),
-  ).toString('hex');
+    // write body
+    const body = {
+      transactions: trans,
+    } as BlockBody;
 
-  const data = delimiterHex + sizeHex + headerHex + lengthHex + bodyHex;
+    // write body
+    const bodyHex = Buffer.from(stringify(body)).toString('hex');
 
-  appendFileSync(file, data, { encoding: 'hex' });
+    const sizeHex = Buffer.from(
+      '' + (headerHex.length + lengthHex.length + bodyHex.length),
+    ).toString('hex');
+
+    const data = delimiterHex + sizeHex + headerHex + lengthHex + bodyHex;
+
+    await append(file, data, { encoding: 'hex' });
+    resolve();
+  });
 };
 
 /**
@@ -89,9 +118,9 @@ export const saveBinaryHex = (
  * @param {string} filename
  * @returns {number} filesize in bytes
  */
-const getFilesize = (filename: string): number => {
-  const stats = statSync(filename);
-  const fileSizeInBytes = stats.size;
+const getFilesize = async (filename: string): Promise<number> => {
+  const size = await stats(filename);
+  const fileSizeInBytes = size.size;
   return fileSizeInBytes;
 };
 
@@ -99,12 +128,12 @@ const getFilesize = (filename: string): number => {
  *
  * @author Flo Dörr
  */
-const createDir = () => {
-  if (!existsSync(JITCOIN_DIR)) {
-    mkdirSync(JITCOIN_DIR);
+const createDir = async () => {
+  if (!(await pathExists(JITCOIN_DIR))) {
+    await mkdirp(JITCOIN_DIR);
   }
-  if (!existsSync(BLOCKCHAIN_DIR)) {
-    mkdirSync(BLOCKCHAIN_DIR);
+  if (!(await pathExists(BLOCKCHAIN_DIR))) {
+    await mkdirp(BLOCKCHAIN_DIR);
   }
 };
 
@@ -113,19 +142,19 @@ const createDir = () => {
  * @author Flo Dörr
  * @returns {string} current file
  */
-const getJitCoinFile = (): string => {
-  const files = readdirSync(BLOCKCHAIN_DIR);
+const getJitCoinFile = async (): Promise<string> => {
+  const files = await readDir(BLOCKCHAIN_DIR);
   if (files.length === 0) {
     const file = BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(0));
-    writeFileSync(file, '');
-    return (file);
+    await write(file, '');
+    return file;
   }
   const currentFile = BLOCKCHAIN_DIR + '/' + files[files.length - 1];
-  if (getFilesize(currentFile) <= MAX_FILE_SIZE) {
+  if (await getFilesize(currentFile) <= MAX_FILE_SIZE) {
     return currentFile;
   } else {
     const file = BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(getLastFileCount(files) + 1));
-    writeFileSync(file, '');
+    await write(file, '');
     return file;
   }
 };

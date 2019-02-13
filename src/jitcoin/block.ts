@@ -47,7 +47,7 @@ export class Block {
    * @date 2019-01-31
    * @memberof Block
    */
-  async mine() {
+  mine() {
     return new Promise(resolve => {
       const threads = cpus().length;
       console.log(`trying to find nonce... with ${threads} workers...`);
@@ -61,7 +61,7 @@ export class Block {
           steps: threads,
           zeroCount: this.zeroCount,
         });
-        thread.on('message', ({ nonce, hash }) => {
+        thread.on('message', async ({ nonce, hash }) => {
           for (const worker of workers) {
             if (worker !== undefined) {
               worker.kill();
@@ -69,7 +69,7 @@ export class Block {
           }
           this.nonce = nonce;
           this.hash = hash;
-          this.save();
+          await this.save();
           resolve(this.hash);
         });
         console.log(`added thread nr. ${i}`);
@@ -101,7 +101,7 @@ export class Block {
    * @memberof Block
    */
   save() {
-    saveBinaryHex(
+    return saveBinaryHex(
       this.previousBlockHash!!,
       this.merkleTree,
       this.nonce,
