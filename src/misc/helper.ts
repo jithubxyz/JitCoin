@@ -19,15 +19,16 @@ import {
   JITCOIN_FILE_STARTER,
   JITCOIN_FILE_ENDING,
 } from './constants';
-import { stringify } from 'querystring';
-import { Transaction, Block } from '../jitcoin/block';
+import { Transaction, Block, Data } from '../jitcoin/block';
 import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
 import { createHash } from 'crypto';
 import { promisify } from 'util';
-import { deflate, inflate, inflateSync, deflateSync } from 'zlib';
+import { deflate, inflate } from 'zlib';
 
 const write = promisify(writeFile);
+
 const read = promisify(readFile);
+
 const readDir = (path: string): Promise<string[]> =>
   new Promise((resolve, reject) => {
     readdir(path, (err, files) => {
@@ -37,6 +38,7 @@ const readDir = (path: string): Promise<string[]> =>
       resolve(files);
     });
   });
+
 const stats = (path: string): Promise<Stats> =>
   new Promise((resolve, reject) => {
     stat(path, (err, stats) => {
@@ -46,6 +48,7 @@ const stats = (path: string): Promise<Stats> =>
       resolve(stats);
     });
   });
+
 const compress = (buffer: Buffer): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     deflate(buffer, (err, result) => {
@@ -56,6 +59,7 @@ const compress = (buffer: Buffer): Promise<Buffer> => {
     });
   });
 };
+
 const decompress = (buffer: Buffer): Promise<Buffer> => {
   return new Promise((resolve, reject) => {
     inflate(buffer, (err, result) => {
@@ -66,19 +70,6 @@ const decompress = (buffer: Buffer): Promise<Buffer> => {
     });
   });
 };
-const append = (
-  path: string,
-  data: string | Buffer,
-  options: { encoding: string },
-): Promise<Stats> =>
-  new Promise((resolve, reject) => {
-    appendFile(path, data, options, err => {
-      if (err) {
-        reject(err);
-      }
-      resolve();
-    });
-  });
 
 /**
  *
@@ -114,16 +105,14 @@ export const saveBinaryHex = (
 
     const headerSize = headerCompressed.byteLength;
 
-    const trans = new Array<string>();
+    const trans = [];
 
     for (const transaction of transactions) {
-      trans.push(
-        JSON.stringify({
-          amount: transaction.amount,
-          randomHash: transaction.randomHash,
-          userId: transaction.userId,
-        } as TransactionElement),
-      );
+      trans.push({
+        amount: transaction.amount,
+        randomHash: transaction.randomHash,
+        userId: transaction.userId,
+      } as TransactionElement);
     }
 
     // write body
@@ -137,11 +126,11 @@ export const saveBinaryHex = (
 
     const bodySize = bodyCompressed.byteLength;
 
-    //await appendFile(file, DELIMITER);
+    await appendFile(file, DELIMITER);
     await appendFile(file, headerSize);
     await appendFile(file, headerCompressed);
-    //await appendFile(file, bodySize);
-    //await appendFile(file, bodyCompressed);
+    await appendFile(file, bodySize);
+    await appendFile(file, bodyCompressed);
     // just for Bruno
     const data = `${DELIMITER}${headerSize}${headerCompressed}${bodySize}${bodyCompressed}`;
 
@@ -151,65 +140,101 @@ export const saveBinaryHex = (
   });
 };
 
+/**
+ *
+ * @author Flo Dörr
+ * @returns {Promise<Block | null>}
+ */
 export const getLastBlock = (): Promise<Block | null> => {
   return new Promise(async resolve => {
     if (jitcoinPathExists) {
       const file = await getJitCoinFile();
-      //const data: string = ((await read(file)) as Buffer).toString('utf8');
+
       const data: Buffer = (await read(file)) as Buffer;
 
-      const pos = data.slice(
-        data.indexOf('x', undefined, 'utf8'),
-        data.byteLength,
-      );
+      if (data.toString('utf8') !== '') {
+        // removing delimiter from data
+        const lastBlock = data.slice(
+          data.lastIndexOf(DELIMITER, undefined, 'utf8'),
+          data.byteLength,
+        );
 
-      /*const delimiterPostion = data.lastIndexOf(DELIMITER, undefined, 'utf8');
+        const delimiterPostion = Buffer.from(DELIMITER).byteLength;
 
-      const header = data.slice(
-        delimiterPostion + Buffer.from(DELIMITER).byteLength,
-        data.byteLength,
-      );
+        // isolating the header
 
-      const headerSize = header.slice(
-        0,
-        header.indexOf('x', undefined, 'utf8'),
-      );
+        const headerLengthBuffer = lastBlock.slice(
+          delimiterPostion,
+          data.indexOf('x'),
+        );
 
-      const headerCompressed = header.slice(
-        headerSize.byteLength,
-        +headerSize.toString('utf8'),
-      );
+        const headerLength = +headerLengthBuffer.toString('utf8');
 
-      console.log(delimiterPostion);
-      //console.log(header.toString('utf8'));
-      console.log(headerSize.toString('utf8'));
-      console.log('__________________________');
-      console.log(headerCompressed.toString('utf8'));*/
+        const headerStart = delimiterPostion + headerLengthBuffer.byteLength;
 
-      console.log((await decompress(pos)).toString('utf8'));
+        const headerEnd = headerStart + headerLength;
 
-      /*const lastBlock = data.substring(
-        data.lastIndexOf(DELIMITER) + DELIMITER.length,
-        data.length,
-      );
-      const headOffset = lastBlock.indexOf('x');
-      const headerSize: number = +lastBlock.substring(0, headOffset);
-      const headerCompressed = lastBlock.substring(
-        headOffset + 1,
-        headOffset + headerSize - 1,
-      );
-      console.log(headerSize);
-      console.log(await decompress(Buffer.from(headerCompressed)));
-      console.log('______________________________');
-      console.log(
-        lastBlock.substring(headOffset + headerSize + 1, lastBlock.length),
-      );*/
-      //console.log(data.toString('utf8'));
+        const header = lastBlock.slice(headerStart, headerEnd);
 
-      //console.log(inflateSync(data).toString('utf8'));
+        const decompressedHeader = JSON.parse(
+          (await decompress(header)).toString('utf8'),
+        );
 
-      //const bodySize: number = +lastBlock.substring(headOffset + headerSize, )
-      resolve(null);
+        // isolating the body
+
+        const bodyLengthBuffer = lastBlock.slice(
+          headerEnd,
+          lastBlock.indexOf('x', headerEnd),
+        );
+
+        const bodyLength = +bodyLengthBuffer.toString('utf8');
+
+        const bodyStart = headerEnd + bodyLengthBuffer.byteLength;
+
+        const bodyEnd = bodyStart + bodyLength;
+
+        const body = lastBlock.slice(bodyStart, bodyEnd);
+
+        const decompressedBody = JSON.parse(
+          (await decompress(body)).toString('utf8'),
+        );
+
+        // creating Block of the data gathered of the file
+
+        let blockData: Data | null = null;
+
+        for (const transactionItem of decompressedBody.transactions) {
+          const transaction = new Transaction(
+            transactionItem.userId,
+            transactionItem.randomHash,
+            transactionItem.amount,
+          );
+          if (blockData === null) {
+            blockData = new Data(transaction);
+          } else {
+            blockData.addTransaction(transaction);
+          }
+        }
+
+        // recalculating the hash with the given nonce
+
+        const hash = getBlockHash(
+          blockData!!.getData(),
+          decompressedHeader.nonce as number,
+        );
+
+        const block = new Block(
+          decompressedHeader.previousBlockHash,
+          blockData!!,
+          decompressedHeader.nonce,
+          hash,
+          0,
+        );
+
+        resolve(block);
+      } else {
+        resolve(null);
+      }
     } else {
       resolve(null);
     }

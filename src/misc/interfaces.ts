@@ -12,7 +12,7 @@ export interface BlockHeader {
 }
 
 export interface BlockBody {
-  transactions: [string];
+  transactions: TransactionElement[];
 }
 
 export interface TransactionElement {
