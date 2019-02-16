@@ -109,7 +109,7 @@ export class Block {
    */
   save() {
     return saveBinaryHex(
-      this.previousBlockHash!!,
+      this.previousBlockHash,
       this.merkleTree,
       this.nonce,
       this.data.transactions,

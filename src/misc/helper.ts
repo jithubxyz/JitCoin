@@ -80,7 +80,7 @@ const decompress = (buffer: Buffer): Promise<Buffer> => {
  * @param {Transaction[]} transactions
  */
 export const saveBinaryHex = (
-  previousBlockHash: string,
+  previousBlockHash: string | null,
   merkleTree: string,
   nonce: number,
   transactions: Transaction[],
@@ -218,10 +218,14 @@ export const getLastBlock = (): Promise<Block | null> => {
 
         // recalculating the hash with the given nonce
 
-        const hash = getBlockHash(
-          blockData!!.getData(),
-          decompressedHeader.nonce as number,
-        );
+        let hash: string | null = null;
+
+        if (decompressedHeader.nonce !== -1) {
+          hash = getBlockHash(
+            blockData!!.getData(),
+            decompressedHeader.nonce as number,
+          );
+        }
 
         const block = new Block(
           decompressedHeader.previousBlockHash,
@@ -328,4 +332,17 @@ export const getBlockHash = (data: string, nonce?: number): string => {
     .update(`${data}${nonce ? nonce : ''}`)
     .digest()
     .toString('hex');
+};
+
+/**
+ *
+ * @author Flo Dörr
+ * @returns {string} random hash
+ */
+export const getRandomHash = (): string => {
+  const currentDate = new Date().valueOf().toString();
+  const random = Math.random().toString();
+  return createHash('sha512')
+    .update(currentDate + random)
+    .digest('hex');
 };

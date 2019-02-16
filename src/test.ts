@@ -2,7 +2,7 @@ import { Blockchain } from './jitcoin/blockchain';
 import { Block, Data, Transaction } from './jitcoin/block';
 import { createHash } from 'crypto';
 import { prompt } from 'inquirer';
-import { getBlockHash, getLastBlock } from './misc/helper';
+import { getBlockHash, getLastBlock, getRandomHash } from './misc/helper';
 
 let beforeExecution;
 
@@ -29,14 +29,6 @@ let blockchain: Blockchain;
   await randomBlockChain(results.iterations as number, results.zeros as number);
 })();
 
-function getRandomHash(): string {
-  const currentDate = new Date().valueOf().toString();
-  const random = Math.random().toString();
-  return createHash('sha512')
-    .update(currentDate + random)
-    .digest('hex');
-}
-
 async function randomBlockChain(blockCount: number, zeroCount: number) {
   const lastBlock = await getLastBlock();
   if (lastBlock !== null) {
@@ -55,7 +47,9 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     const firstBlock = new Block(null, data, null, null, zeroCount);
 
-    await firstBlock.mine();
+    //await firstBlock.mine();
+
+    await firstBlock.save();
 
     elapsedTime = Date.now() - beforeExecution;
 
@@ -122,7 +116,7 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
       zeroCount,
     );
 
-    await block.mine();
+    //await block.mine();
 
     blockchain.addBlock(block);
 
