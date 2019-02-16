@@ -30,15 +30,22 @@ export class Block {
    * @param {Data} data
    * @memberof Block
    */
-  constructor(previousBlockHash: string | null, data: Data, zeroCount: number) {
+  constructor(
+    previousBlockHash: string | null,
+    data: Data,
+    nonce: number | null,
+    hash: string | null,
+    zeroCount: number,
+  ) {
     // Debug
     this.zeroCount = zeroCount;
 
     this.previousBlockHash = previousBlockHash;
     this.data = data;
-    this.hash = '';
-    this.nonce = -1;
+    this.hash = hash ? hash : '';
+    this.nonce = nonce ? nonce : -1;
     this.merkleTree = data.getMerkleTree();
+    //log(this.data.getData());
   }
 
   /**
@@ -102,7 +109,7 @@ export class Block {
    */
   save() {
     return saveBinaryHex(
-      this.previousBlockHash!!,
+      this.previousBlockHash,
       this.merkleTree,
       this.nonce,
       this.data.transactions,

@@ -2,7 +2,7 @@ import { Blockchain } from './jitcoin/blockchain';
 import { Block, Data, Transaction } from './jitcoin/block';
 import { createHash } from 'crypto';
 import { prompt } from 'inquirer';
-import { getBlockHash } from './misc/helper';
+import { getBlockHash, getLastBlock, getRandomHash } from './misc/helper';
 
 let beforeExecution;
 
@@ -29,42 +29,52 @@ let blockchain: Blockchain;
   await randomBlockChain(results.iterations as number, results.zeros as number);
 })();
 
-function getRandomHash(): string {
-  const currentDate = new Date().valueOf().toString();
-  const random = Math.random().toString();
-  return createHash('sha512')
-    .update(currentDate + random)
-    .digest('hex');
-}
-
 async function randomBlockChain(blockCount: number, zeroCount: number) {
-  beforeExecution = Date.now();
+  const lastBlock = await getLastBlock();
+  if (lastBlock !== null) {
+    // just for Bruno
+    console.log(
+      `Found saved blockchain! Appending to existing block whose hash is ${
+        lastBlock.hash
+      }`,
+    );
+    blockchain = new Blockchain(lastBlock);
+    followingBlocks(blockCount, zeroCount);
+  } else {
+    beforeExecution = Date.now();
 
-  const data = getRandomData();
+    const data = getRandomData();
 
-  const firstBlock = new Block(null, data, zeroCount);
+    const firstBlock = new Block(null, data, null, null, zeroCount);
 
-  await firstBlock.mine();
+    //await firstBlock.mine();
 
-  elapsedTime = Date.now() - beforeExecution;
+    await firstBlock.save();
 
-  console.log(
-    'mining took ' +
-    elapsedTime / 1000 +
-    ' seconds (' +
-    (elapsedTime / 1000 / 60).toFixed(2) +
-    ' minutes)',
-  );
+    elapsedTime = Date.now() - beforeExecution;
 
-  console.log(
-    'My hash is: ' + getBlockHash(firstBlock.data.getData(), firstBlock.nonce) + '\nI am the first block!',
-  );
+    console.log(
+      'mining took ' +
+        elapsedTime / 1000 +
+        ' seconds (' +
+        (elapsedTime / 1000 / 60).toFixed(2) +
+        ' minutes)',
+    );
 
-  console.log(
-    '____________________________________________________________________________________________________________________________________________',
-  );
+    console.log(
+      'My hash is: ' +
+        getBlockHash(firstBlock.data.getData(), firstBlock.nonce) +
+        '\nI am the first block!',
+    );
 
-  blockchain = new Blockchain(firstBlock);
+    console.log(
+      '____________________________________________________________________________________________________________________________________________',
+    );
+
+    blockchain = new Blockchain(firstBlock);
+
+    followingBlocks(blockCount - 1, zeroCount);
+  }
 
   /*beforeExecution = Date.now();
 
@@ -89,21 +99,24 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
   console.log(
     '____________________________________________________________________________________________________________________________________________',
   );*/
-
-  followingBlocks(blockCount, zeroCount);
 }
 
 async function followingBlocks(blockCount: number, zeroCount: number) {
-  for (let i = 0; i < blockCount - 1; i++) {
+  for (let i = 0; i < blockCount; i++) {
     beforeExecution = Date.now();
 
     const block = new Block(
-      getBlockHash(blockchain.blocks[blockchain.blocks.length - 1].data.getData(), blockchain.blocks[blockchain.blocks.length - 1].nonce),
+      getBlockHash(
+        blockchain.blocks[blockchain.blocks.length - 1].data.getData(),
+        blockchain.blocks[blockchain.blocks.length - 1].nonce,
+      ),
       getRandomData(),
+      null,
+      null,
       zeroCount,
     );
 
-    await block.mine();
+    //await block.mine();
 
     blockchain.addBlock(block);
 
@@ -111,19 +124,31 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 
     console.log(
       'mining took ' +
-      elapsedTime / 1000 +
-      ' seconds (' +
-      (elapsedTime / 1000 / 60).toFixed(2) +
-      ' minutes)',
+        elapsedTime / 1000 +
+        ' seconds (' +
+        (elapsedTime / 1000 / 60).toFixed(2) +
+        ' minutes)',
     );
+
+    /*console.log(
+      'My hash is: ' +
+        getBlockHash(block.data.getData(), block.nonce) +
+        '\nI am the ' +
+        (i + 2) +
+        '. block! The previous hash was: ' +
+        getBlockHash(
+          blockchain.blocks[blockchain.blocks.length - 2].data.getData(),
+          blockchain.blocks[blockchain.blocks.length - 2].nonce,
+        ),
+    );*/
 
     console.log(
       'My hash is: ' +
-      getBlockHash(block.data.getData(), block.nonce) +
-      '\nI am the ' +
-      (i + 2) +
-      '. block! The previous hash was: ' +
-      getBlockHash(blockchain.blocks[blockchain.blocks.length - 2].data.getData(), blockchain.blocks[blockchain.blocks.length - 2].nonce),
+        getBlockHash(block.data.getData(), block.nonce) +
+        '\nI am the ' +
+        (i + 2) +
+        '. block! The previous hash was: ' +
+        blockchain.blocks[blockchain.blocks.length - 1].previousBlockHash,
     );
 
     console.log(
