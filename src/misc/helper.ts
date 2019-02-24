@@ -131,11 +131,7 @@ export const saveBinaryHex = (
     await appendFile(file, headerCompressed);
     await appendFile(file, bodySize);
     await appendFile(file, bodyCompressed);
-    // just for Bruno
-    const data = `${DELIMITER}${headerSize}${headerCompressed}${bodySize}${bodyCompressed}`;
 
-    //await append(file, data, { encoding: 'utf8' });
-    //await append(file, headerCompressed, { encoding: 'utf8' });
     resolve();
   });
 };
@@ -158,7 +154,6 @@ export const getLastBlock = (): Promise<Block | null> => {
           data.lastIndexOf(DELIMITER, undefined, 'utf8'),
           data.byteLength,
         );
-
         const delimiterPostion = Buffer.from(DELIMITER).byteLength;
 
         // isolating the header
@@ -241,6 +236,110 @@ export const getLastBlock = (): Promise<Block | null> => {
       }
     } else {
       resolve(null);
+    }
+  });
+};
+
+/**
+ *
+ * @author Flo Dörr
+ * @returns {Promise<Block | null>}
+ */
+export const updateLastBlockData = (): Promise<boolean> => {
+  return new Promise(async resolve => {
+    if (jitcoinPathExists) {
+      const file = await getJitCoinFile();
+
+      const data: Buffer = (await read(file)) as Buffer;
+
+      if (data.toString('utf8') !== '') {
+        // removing delimiter from data
+        const lastBlock = data.slice(
+          data.lastIndexOf(DELIMITER, undefined, 'utf8'),
+          data.byteLength,
+        );
+        const delimiterPostion = Buffer.from(DELIMITER).byteLength;
+
+        // isolating the header
+
+        const headerLengthBuffer = lastBlock.slice(
+          delimiterPostion,
+          data.indexOf('x'),
+        );
+
+        const headerLength = +headerLengthBuffer.toString('utf8');
+
+        const headerStart = delimiterPostion + headerLengthBuffer.byteLength;
+
+        const headerEnd = headerStart + headerLength;
+
+        const header = lastBlock.slice(headerStart, headerEnd);
+
+        const decompressedHeader = JSON.parse(
+          (await decompress(header)).toString('utf8'),
+        );
+
+        // isolating the body
+
+        const bodyLengthBuffer = lastBlock.slice(
+          headerEnd,
+          lastBlock.indexOf('x', headerEnd),
+        );
+
+        const bodyLength = +bodyLengthBuffer.toString('utf8');
+
+        const bodyStart = headerEnd + bodyLengthBuffer.byteLength;
+
+        const bodyEnd = bodyStart + bodyLength;
+
+        const body = lastBlock.slice(bodyStart, bodyEnd);
+
+        const decompressedBody = JSON.parse(
+          (await decompress(body)).toString('utf8'),
+        );
+
+        // creating Block of the data gathered of the file
+
+        let blockData: Data | null = null;
+
+        for (const transactionItem of decompressedBody.transactions) {
+          const transaction = new Transaction(
+            transactionItem.userId,
+            transactionItem.randomHash,
+            transactionItem.amount,
+          );
+          if (blockData === null) {
+            blockData = new Data(transaction);
+          } else {
+            blockData.addTransaction(transaction);
+          }
+        }
+
+        // recalculating the hash with the given nonce
+
+        let hash: string | null = null;
+
+        if (decompressedHeader.nonce !== -1) {
+          hash = getBlockHash(
+            blockData!!.getData(),
+            decompressedHeader.nonce as number,
+          );
+        }
+
+        const block = new Block(
+          decompressedHeader.previousBlockHash,
+          blockData!!,
+          decompressedHeader.nonce,
+          hash,
+          0,
+        );
+
+        resolve(block);
+      } else {
+        resolve(false);
+      }
+    } else {
+      resolve(false);
     }
   });
 };
