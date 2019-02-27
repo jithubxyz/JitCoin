@@ -46,7 +46,9 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     const firstBlock = new Block(null, data, null, null, zeroCount);
 
-    await firstBlock.mine();
+    //await firstBlock.mine();
+
+    await firstBlock.save();
 
     elapsedTime = Date.now() - beforeExecution;
 
@@ -157,7 +159,7 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 function getRandomData(): Data {
   const transaction = getRandomTransaction();
   const data = new Data(transaction);
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < 6; i++) {
     data.addTransaction(getRandomTransaction());
   }
   return data;

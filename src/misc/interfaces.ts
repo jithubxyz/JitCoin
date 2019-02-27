@@ -9,6 +9,7 @@ export interface BlockHeader {
   merkleTree: string;
   time: number;
   nonce: number;
+  hash: string | null;
 }
 
 export interface BlockBody {
@@ -26,4 +27,10 @@ export interface MiningChild {
   data: string;
   steps: number;
   zeroCount: number;
+}
+
+export interface BlockResponse {
+  message: string;
+  code: number;
+  data: object | null;
 }

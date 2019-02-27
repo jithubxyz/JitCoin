@@ -5,6 +5,10 @@
 
 export const VERSION = 1;
 
+export const TRANSACTIONS_PER_BLOCK = 10;
+
+export const DIFFICULTY = 5;
+
 export const JITCOIN_DIR = './.jitcoin';
 
 export const BLOCKCHAIN_DIR = './.jitcoin/blockchain';
@@ -27,3 +31,13 @@ export const DELIMITER = 'ĴḯŤ';
 // express constants
 
 export const PORT = 7179;
+
+export enum RESPONSE_CODES {
+  PASS,
+  MINE_BLOCK,
+  NEW_BLOCK,
+  ERROR,
+  MINING_ERROR,
+  NO_BLOCK_ON_DISK,
+  ALREADY_MINED,
+}

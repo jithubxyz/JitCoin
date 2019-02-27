@@ -1,17 +1,17 @@
 import { MiningChild } from '../misc/interfaces';
-import { getBlockHash } from '../misc/helper';
+import { getBlockHash, getZeroString } from '../misc/helper';
 import { stdout as log } from 'single-line-log';
+import { DIFFICULTY } from '../misc/constants';
 
 if (process !== undefined && process.send !== undefined) {
   process.on('message', async (message: MiningChild) => {
-    process.send = process.send || (() => { });
+    process.send = process.send || (() => {});
     const steps = message.steps;
-    let nonce = (message.startingNonce) - steps;
+    let nonce = message.startingNonce - steps;
     const data = message.data;
-    const zeroCount = message.zeroCount;
     let hash = '';
     const workerNumber = message.startingNonce;
-    while (hash.substring(0, zeroCount) !== getZeroString(zeroCount)) {
+    while (hash.substring(0, DIFFICULTY) !== getZeroString()) {
       // incrementing the nonce | init value is -1
       nonce += steps;
       // data of the block is being hashed with the nonce
@@ -25,7 +25,3 @@ if (process !== undefined && process.send !== undefined) {
     process.send({ nonce, hash });
   });
 }
-
-const getZeroString = (zeroCount: number): string => {
-  return ''.padEnd(zeroCount, '0');
-};

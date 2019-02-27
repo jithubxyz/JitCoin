@@ -1,5 +1,5 @@
 import { stringify } from 'querystring';
-import { saveBinaryHex, getBlockHash } from '../misc/helper';
+import { saveBinaryHex, getBlockHash, getZeroString } from '../misc/helper';
 import { fork, ChildProcess } from 'child_process';
 import { cpus } from 'os';
 import { stdout as log } from 'single-line-log';
@@ -85,7 +85,7 @@ export class Block {
   }
 
   mineOld() {
-    while (this.hash.substring(0, this.zeroCount) !== this.getZeroString()) {
+    while (this.hash.substring(0, this.zeroCount) !== getZeroString()) {
       // incrementing the nonce | init value is -1
       this.nonce++;
       // data of the block is being hashed with the nonce
@@ -98,10 +98,6 @@ export class Block {
     console.log("\nnonce found! it's " + this.nonce);
   }
 
-  getZeroString(): string {
-    return ''.padEnd(this.zeroCount, '0');
-  }
-
   /**
    * saves the block to the disk
    *
@@ -112,7 +108,7 @@ export class Block {
       this.previousBlockHash,
       this.merkleTree,
       this.nonce,
-      this.data.transactions,
+      this.data,
     );
   }
 }
