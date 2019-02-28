@@ -44,7 +44,7 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     const data = getRandomData();
 
-    const firstBlock = new Block(null, data, null, null, zeroCount);
+    const firstBlock = new Block(null, data);
 
     //await firstBlock.mine();
 
@@ -110,9 +110,6 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
         blockchain.blocks[blockchain.blocks.length - 1].nonce,
       ),
       getRandomData(),
-      null,
-      null,
-      zeroCount,
     );
 
     await block.mine();

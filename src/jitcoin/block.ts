@@ -1,5 +1,5 @@
 import { stringify } from 'querystring';
-import { saveBinaryHex, getBlockHash, getZeroString } from '../misc/helper';
+import { saveBinaryHex, getBlockHash, getZeroString, isHashMined } from '../misc/helper';
 import { fork, ChildProcess } from 'child_process';
 import { cpus } from 'os';
 import { stdout as log } from 'single-line-log';
@@ -19,9 +19,6 @@ export class Block {
   hash: string;
   nonce: number;
 
-  // Debug
-  zeroCount: number;
-
   /**
    * Creates an instance of Block.
    *
@@ -33,12 +30,9 @@ export class Block {
   constructor(
     previousBlockHash: string | null,
     data: Data,
-    nonce: number | null,
-    hash: string | null,
-    zeroCount: number,
+    nonce?: number | undefined,
+    hash?: string | undefined,
   ) {
-    // Debug
-    this.zeroCount = zeroCount;
 
     this.previousBlockHash = previousBlockHash;
     this.data = data;
@@ -66,7 +60,6 @@ export class Block {
           startingNonce: i,
           data: this.data.getData(),
           steps: threads,
-          zeroCount: this.zeroCount,
         });
         thread.on('message', async ({ nonce, hash }) => {
           for (const worker of workers) {
@@ -85,7 +78,7 @@ export class Block {
   }
 
   mineOld() {
-    while (this.hash.substring(0, this.zeroCount) !== getZeroString()) {
+    while (!isHashMined(this.hash)) {
       // incrementing the nonce | init value is -1
       this.nonce++;
       // data of the block is being hashed with the nonce

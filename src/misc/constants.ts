@@ -7,7 +7,7 @@ export const VERSION = 1;
 
 export const TRANSACTIONS_PER_BLOCK = 10;
 
-export const DIFFICULTY = 5;
+export const DIFFICULTY = 4;
 
 export const JITCOIN_DIR = './.jitcoin';
 
@@ -36,8 +36,10 @@ export enum RESPONSE_CODES {
   PASS,
   MINE_BLOCK,
   NEW_BLOCK,
+  NO_AMOUNT_PROVIDED,
   ERROR,
   MINING_ERROR,
   NO_BLOCK_ON_DISK,
   ALREADY_MINED,
+  NOT_YET_MINED,
 }

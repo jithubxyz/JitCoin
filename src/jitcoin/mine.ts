@@ -1,5 +1,5 @@
 import { MiningChild } from '../misc/interfaces';
-import { getBlockHash, getZeroString } from '../misc/helper';
+import { getBlockHash, getZeroString, isHashMined } from '../misc/helper';
 import { stdout as log } from 'single-line-log';
 import { DIFFICULTY } from '../misc/constants';
 
@@ -11,7 +11,7 @@ if (process !== undefined && process.send !== undefined) {
     const data = message.data;
     let hash = '';
     const workerNumber = message.startingNonce;
-    while (hash.substring(0, DIFFICULTY) !== getZeroString()) {
+    while (!isHashMined(hash)) {
       // incrementing the nonce | init value is -1
       nonce += steps;
       // data of the block is being hashed with the nonce

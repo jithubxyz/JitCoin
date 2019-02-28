@@ -131,7 +131,7 @@ export const saveBinaryHex = (
  */
 export const getLastBlock = (): Promise<Block | null> => {
   return new Promise(async resolve => {
-    if (jitcoinPathExists) {
+    if (await jitcoinPathExists()) {
       const file = await getJitCoinFile();
 
       const data: Buffer = (await read(file)) as Buffer;
@@ -201,7 +201,7 @@ export const getLastBlock = (): Promise<Block | null> => {
 
         // recalculating the hash with the given nonce
 
-        let hash: string | null = null;
+        let hash: string | undefined = undefined;
 
         if (decompressedHeader.nonce !== -1) {
           hash = getBlockHash(
@@ -215,7 +215,6 @@ export const getLastBlock = (): Promise<Block | null> => {
           blockData!!,
           decompressedHeader.nonce,
           hash,
-          0,
         );
 
         resolve(block);
@@ -237,7 +236,7 @@ export const updateLastBlockData = (
   transaction: Transaction,
 ): Promise<boolean> => {
   return new Promise(async resolve => {
-    if (jitcoinPathExists) {
+    if (await jitcoinPathExists()) {
       // get the last block
       const block = (await getLastBlock())!!;
 
@@ -307,7 +306,7 @@ export const getJSONHeader = (
   merkleTree: string,
   nonce: number,
   time: undefined | number,
-  hash: string | null,
+  hash: string | undefined,
 ): BlockHeader => {
   const header = {
     version: VERSION,
@@ -329,7 +328,7 @@ export const getJSONHeader = (
  */
 export const getJSONHeaderFromBlock = (
   block: Block,
-  time: number | null,
+  time?: number,
 ): BlockHeader => {
   const header = {
     version: VERSION,
@@ -458,6 +457,21 @@ export const getRandomHash = (): string => {
     .digest('hex');
 };
 
+/**
+ *
+ * @author Flo Dörr
+ * @param {string} hash
+ * @returns {boolean} true if hash was mined
+ */
+export const isHashMined = (hash: string): boolean => {
+  return hash.substring(0, DIFFICULTY) === getZeroString();
+};
+
+/**
+ *
+ * @author Flo Dörr
+ * @returns {string} difficulty as string
+ */
 export const getZeroString = (): string => {
   return ''.padEnd(DIFFICULTY, '0');
 };
