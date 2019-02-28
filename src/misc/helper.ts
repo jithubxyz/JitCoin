@@ -246,12 +246,34 @@ export const updateLastBlockData = (
       // adding the new transaction
       block.data.addTransaction(transaction);
 
-      // saving the block to the disk
-      await block.save();
-
       // resetting nonce and hash
       block.nonce = -1;
       block.hash = '';
+
+      // saving the block to the disk
+      await block.save();
+      resolve(true);
+    } else {
+      resolve(false);
+    }
+  });
+};
+
+/**
+ *
+ * @author Flo Dörr
+ * @returns {Promise<Block | null>}
+ */
+export const updateLastBlock = (
+  block: Block,
+): Promise<boolean> => {
+  return new Promise(async resolve => {
+    if (await jitcoinPathExists()) {
+      // delete the last block from file
+      await deleteLastBlock();
+
+      // saving the block to the disk
+      await block.save();
       resolve(true);
     } else {
       resolve(false);

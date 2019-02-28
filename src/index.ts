@@ -14,6 +14,7 @@ import {
   getZeroString,
   getJSONHeaderFromBlock,
   isHashMined,
+  updateLastBlock,
 } from './misc/helper';
 import { Transaction, Data, Block } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
@@ -30,13 +31,20 @@ app.get('/mine', express.json(), async (req, res) => {
         ) !== getZeroString()
       ) {
         await block.mine();
-        const header = getJSONHeaderFromBlock(block);
-        const body = getJSONBody(block.data.transactions);
-        res.json({
-          message: 'Block was mined successfully!⛏️',
-          code: RESPONSE_CODES.PASS,
-          data: [header, body],
-        } as BlockResponse);
+        if(await updateLastBlock(block)){
+          const header = getJSONHeaderFromBlock(block);
+          const body = getJSONBody(block.data.transactions);
+          res.json({
+            message: 'Block was mined successfully!⛏️',
+            code: RESPONSE_CODES.PASS,
+            data: [header, body],
+          } as BlockResponse);
+        }else{
+          res.json({
+            message: 'Error while saving block to disk!😞',
+            code: RESPONSE_CODES.SAVING_ERROR,
+          } as BlockResponse);
+        }
       } else {
         res.json({
           message: 'This Block was already mined!😞',
@@ -150,6 +158,7 @@ app.post('/newBlock', express.json(), async (req, res) => {
         const transaction = new Transaction(userId ? userId : getRandomHash(), getRandomHash(), amount);
         const data = new Data(transaction);
         const block = new Block(previousHash, data);
+        await block.save();
         const header = getJSONHeaderFromBlock(block);
         const body = getJSONBody(block.data.transactions);
         res.json({
