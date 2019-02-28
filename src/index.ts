@@ -4,6 +4,8 @@ import {
   TRANSACTIONS_PER_BLOCK,
   RESPONSE_CODES,
   DIFFICULTY,
+  BLOCKCHAIN_DIR,
+  JITCOIN_FILE,
 } from './misc/constants';
 import {
   getRandomHash,
@@ -15,6 +17,9 @@ import {
   getJSONHeaderFromBlock,
   isHashMined,
   updateLastBlock,
+  deleteLastBlock,
+  lengthLastBlockFile,
+  jitcoinFileByNumber,
 } from './misc/helper';
 import { Transaction, Data, Block } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
@@ -30,26 +35,19 @@ app.get('/mine', express.json(), async (req, res) => {
           DIFFICULTY,
         ) !== getZeroString()
       ) {
+        await deleteLastBlock();
         await block.mine();
-        if(await updateLastBlock(block)){
-          const header = getJSONHeaderFromBlock(block);
-          const body = getJSONBody(block.data.transactions);
-          res.json({
-            message: 'Block was mined successfully!⛏️',
-            code: RESPONSE_CODES.PASS,
-            data: [header, body],
-          } as BlockResponse);
-        }else{
-          res.json({
-            message: 'Error while saving block to disk!😞',
-            code: RESPONSE_CODES.SAVING_ERROR,
-          } as BlockResponse);
-        }
+        const header = getJSONHeaderFromBlock(block);
+        const body = getJSONBody(block.data.transactions);
+        res.json({
+          message: 'Block was mined successfully!⛏️',
+          code: RESPONSE_CODES.PASS,
+          data: [header, body],
+        } as BlockResponse);
       } else {
         res.json({
           message: 'This Block was already mined!😞',
           code: RESPONSE_CODES.ALREADY_MINED,
-          data: null,
         } as BlockResponse);
       }
     }
@@ -64,10 +62,10 @@ app.get('/mine', express.json(), async (req, res) => {
 app.post('/addTransaction', express.json(), async (req, res) => {
   const body = req.body;
   const amount: number | undefined = body.amount;
-  if(amount !== undefined){
+  if (amount !== undefined) {
     const randomHash: string = getRandomHash();
     let userId: string | undefined = body.userId;
-  
+
     if (userId === undefined) {
       userId = getRandomHash();
     }
@@ -120,7 +118,7 @@ app.post('/addTransaction', express.json(), async (req, res) => {
         code: RESPONSE_CODES.NO_BLOCK_ON_DISK,
       } as BlockResponse);
     }
-  }else{
+  } else {
     res.json({
       message: 'No amount parameter was provided!😞',
       code: RESPONSE_CODES.NO_AMOUNT_PROVIDED,
@@ -151,37 +149,73 @@ app.post('/newBlock', express.json(), async (req, res) => {
   const body = req.body;
   const userId = body.userId;
   const amount: number | undefined = body.amount;
-  if(amount !== undefined){
-    if(lastBlock !== null){
-      const previousHash = getBlockHash(lastBlock.data.getData(), lastBlock.nonce);
-      if(isHashMined(previousHash)){
-        const transaction = new Transaction(userId ? userId : getRandomHash(), getRandomHash(), amount);
-        const data = new Data(transaction);
-        const block = new Block(previousHash, data);
-        await block.save();
-        const header = getJSONHeaderFromBlock(block);
-        const body = getJSONBody(block.data.transactions);
-        res.json({
-          message: 'The new Block was created successfully!😠',
-          code: RESPONSE_CODES.PASS,
-          data: [header, body],
-        } as BlockResponse);
-      }else{
-        res.json({
-          message: 'The previous block was not mined!😠',
-          code: RESPONSE_CODES.NOT_YET_MINED,
-        } as BlockResponse);
-      }
-    }else{
+  if (amount !== undefined) {
+    let previousHash: string | null = null;
+    if (lastBlock !== null) {
+      previousHash = getBlockHash(lastBlock.data.getData(), lastBlock.nonce);
+    }
+    if (isHashMined(previousHash)) {
+      const transaction = new Transaction(
+        userId ? userId : getRandomHash(),
+        getRandomHash(),
+        amount,
+      );
+      const data = new Data(transaction);
+      const block = new Block(previousHash, data);
+      await block.save();
+      const header = getJSONHeaderFromBlock(block);
+      const body = getJSONBody(block.data.transactions);
       res.json({
-        message: 'No Jitcoin file found!😠',
-        code: RESPONSE_CODES.NO_BLOCK_ON_DISK,
+        message: 'The new Block was created successfully!😠',
+        code: RESPONSE_CODES.PASS,
+        data: [header, body],
+      } as BlockResponse);
+    } else {
+      res.json({
+        message: 'The previous block was not mined!😠',
+        code: RESPONSE_CODES.NOT_YET_MINED,
       } as BlockResponse);
     }
-  }else{
+  } else {
     res.json({
       message: 'No amount parameter was provided!😞',
       code: RESPONSE_CODES.NO_AMOUNT_PROVIDED,
+    } as BlockResponse);
+  }
+});
+
+app.get('/deleteLastBlock', express.json(), async (req, res) => {
+  if (await deleteLastBlock()) {
+    res.json({
+      message: 'The Block was deleted!',
+      code: RESPONSE_CODES.PASS,
+    } as BlockResponse);
+  } else {
+    res.json({
+      message: 'The Block could not be deleted!😞',
+      code: RESPONSE_CODES.ERROR,
+    } as BlockResponse);
+  }
+});
+
+app.post('/length', express.json(), async (req, res) => {
+  const body = req.body;
+  const fileNumber = body.file as number;
+  let file = null;
+  if (fileNumber !== null) {
+    file = jitcoinFileByNumber(fileNumber);
+  }
+  const count = await lengthLastBlockFile(file);
+  if (count !== null) {
+    res.json({
+      message: 'Length found!',
+      code: RESPONSE_CODES.PASS,
+      data: count,
+    } as BlockResponse);
+  } else {
+    res.json({
+      message: 'No length found!😞',
+      code: RESPONSE_CODES.ERROR,
     } as BlockResponse);
   }
 });

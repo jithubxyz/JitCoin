@@ -32,5 +32,5 @@ export interface MiningChild {
 export interface BlockResponse {
   message: string;
   code: number;
-  data: object | null;
+  data: object | null | any;
 }

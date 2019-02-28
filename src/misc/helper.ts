@@ -264,17 +264,17 @@ export const updateLastBlockData = (
  * @author Flo Dörr
  * @returns {Promise<Block | null>}
  */
-export const updateLastBlock = (
-  block: Block,
-): Promise<boolean> => {
+export const updateLastBlock = (block: Block): Promise<boolean> => {
   return new Promise(async resolve => {
     if (await jitcoinPathExists()) {
       // delete the last block from file
-      await deleteLastBlock();
-
-      // saving the block to the disk
-      await block.save();
-      resolve(true);
+      if (await deleteLastBlock()) {
+        // saving the block to the disk
+        await block.save();
+        resolve(true);
+      } else {
+        resolve(false);
+      }
     } else {
       resolve(false);
     }
@@ -285,7 +285,7 @@ export const updateLastBlock = (
  *
  * @author Flo Dörr
  */
-const deleteLastBlock = (): Promise<boolean> => {
+export const deleteLastBlock = (): Promise<boolean> => {
   return new Promise(async resolve => {
     const file = await getJitCoinFile();
 
@@ -485,8 +485,12 @@ export const getRandomHash = (): string => {
  * @param {string} hash
  * @returns {boolean} true if hash was mined
  */
-export const isHashMined = (hash: string): boolean => {
-  return hash.substring(0, DIFFICULTY) === getZeroString();
+export const isHashMined = (hash: string | null): boolean => {
+  if (hash === null) {
+    return true;
+  } else {
+    return hash.substring(0, DIFFICULTY) === getZeroString();
+  }
 };
 
 /**
@@ -496,4 +500,32 @@ export const isHashMined = (hash: string): boolean => {
  */
 export const getZeroString = (): string => {
   return ''.padEnd(DIFFICULTY, '0');
+};
+
+/**
+ *
+ * @author Flo Dörr
+ * @returns {string} difficulty as string
+ */
+export const lengthLastBlockFile = (
+  file?: string | null,
+): Promise<number | null> => {
+  return new Promise(async resolve => {
+    if (file === null || file === undefined) {
+      file = await getJitCoinFile();
+    }
+    let data: Buffer = (await read(file)) as Buffer;
+    let counter = 0;
+    while (data.toString('utf8') !== '') {
+      if (data.toString('utf8') !== '') {
+        data = data.slice(0, data.lastIndexOf(DELIMITER, undefined, 'utf8'));
+        counter++;
+      }
+    }
+    resolve(counter);
+  });
+};
+
+export const jitcoinFileByNumber = (number: number): string => {
+  return BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(number));
 };
