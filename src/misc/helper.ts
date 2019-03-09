@@ -142,88 +142,91 @@ export const getLastBlock = (): Promise<Block | null> => {
           data.lastIndexOf(DELIMITER, undefined, 'utf8'),
           data.byteLength,
         );
-        const delimiterPostion = Buffer.from(DELIMITER).byteLength;
 
-        // isolating the header
-
-        const headerLengthBuffer = lastBlock.slice(
-          delimiterPostion,
-          data.indexOf('x'),
-        );
-
-        const headerLength = +headerLengthBuffer.toString('utf8');
-
-        const headerStart = delimiterPostion + headerLengthBuffer.byteLength;
-
-        const headerEnd = headerStart + headerLength;
-
-        const header = lastBlock.slice(headerStart, headerEnd);
-
-        const decompressedHeader = JSON.parse(
-          (await decompress(header)).toString('utf8'),
-        );
-
-        // isolating the body
-
-        const bodyLengthBuffer = lastBlock.slice(
-          headerEnd,
-          lastBlock.indexOf('x', headerEnd),
-        );
-
-        const bodyLength = +bodyLengthBuffer.toString('utf8');
-
-        const bodyStart = headerEnd + bodyLengthBuffer.byteLength;
-
-        const bodyEnd = bodyStart + bodyLength;
-
-        const body = lastBlock.slice(bodyStart, bodyEnd);
-
-        const decompressedBody = JSON.parse(
-          (await decompress(body)).toString('utf8'),
-        );
-
-        // creating Block of the data gathered of the file
-
-        let blockData: Data | null = null;
-
-        for (const transactionItem of decompressedBody.transactions) {
-          const transaction = new Transaction(
-            transactionItem.userId,
-            transactionItem.randomHash,
-            transactionItem.amount,
-          );
-          if (blockData === null) {
-            blockData = new Data(transaction);
-          } else {
-            blockData.addTransaction(transaction);
-          }
-        }
-
-        // recalculating the hash with the given nonce
-
-        let hash: string | undefined = undefined;
-
-        if (decompressedHeader.nonce !== -1) {
-          hash = getBlockHash(
-            blockData!!.getData(),
-            decompressedHeader.nonce as number,
-          );
-        }
-
-        const block = new Block(
-          decompressedHeader.previousBlockHash,
-          blockData!!,
-          decompressedHeader.nonce,
-          hash,
-        );
-
-        resolve(block);
+        resolve(await parseFileData(lastBlock));
       } else {
         resolve(null);
       }
     } else {
       resolve(null);
     }
+  });
+};
+
+export const parseFileData = (data: Buffer): Promise<Block> => {
+  return new Promise(async resolve => {
+    const delimiterPostion = Buffer.from(DELIMITER).byteLength;
+
+    // isolating the header
+
+    const headerLengthBuffer = data.slice(delimiterPostion, data.indexOf('x'));
+
+    const headerLength = +headerLengthBuffer.toString('utf8');
+
+    const headerStart = delimiterPostion + headerLengthBuffer.byteLength;
+
+    const headerEnd = headerStart + headerLength;
+
+    const header = data.slice(headerStart, headerEnd);
+
+    const decompressedHeader = JSON.parse(
+      (await decompress(header)).toString('utf8'),
+    );
+
+    // isolating the body
+
+    const bodyLengthBuffer = data.slice(
+      headerEnd,
+      data.indexOf('x', headerEnd),
+    );
+
+    const bodyLength = +bodyLengthBuffer.toString('utf8');
+
+    const bodyStart = headerEnd + bodyLengthBuffer.byteLength;
+
+    const bodyEnd = bodyStart + bodyLength;
+
+    const body = data.slice(bodyStart, bodyEnd);
+
+    const decompressedBody = JSON.parse(
+      (await decompress(body)).toString('utf8'),
+    );
+
+    // creating Block of the data gathered of the file
+
+    let blockData: Data | null = null;
+
+    for (const transactionItem of decompressedBody.transactions) {
+      const transaction = new Transaction(
+        transactionItem.userId,
+        transactionItem.randomHash,
+        transactionItem.amount,
+      );
+      if (blockData === null) {
+        blockData = new Data(transaction);
+      } else {
+        blockData.addTransaction(transaction);
+      }
+    }
+
+    // recalculating the hash with the given nonce
+
+    let hash: string | undefined = undefined;
+
+    if (decompressedHeader.nonce !== -1) {
+      hash = getBlockHash(
+        blockData!!.getData(),
+        decompressedHeader.nonce as number,
+      );
+    }
+
+    const block = new Block(
+      decompressedHeader.previousBlockHash,
+      blockData!!,
+      decompressedHeader.nonce,
+      hash,
+    );
+    resolve(block);
   });
 };
 
@@ -505,7 +508,7 @@ export const getZeroString = (): string => {
 /**
  *
  * @author Flo Dörr
- * @returns {string} difficulty as string
+ * @returns {number | null} length of lastBlockFile
  */
 export const lengthLastBlockFile = (
   file?: string | null,
@@ -526,6 +529,37 @@ export const lengthLastBlockFile = (
   });
 };
 
-export const jitcoinFileByNumber = (number: number): string => {
-  return BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(number));
+/**
+ *
+ * @author Flo Dörr
+ * @returns {Block[] | null} Array of blocks (the block with index 0 is the top one)
+ */
+export const getFileAsArray = (
+  file?: string | null,
+): Promise<Block[] | null> => {
+  return new Promise(async resolve => {
+    if (file === null || file === undefined) {
+      file = await getJitCoinFile();
+    }
+    let data: Buffer = (await read(file)) as Buffer;
+    if (data !== null || data !== undefined) {
+      const blocks: Block[] = [];
+      while (data.toString('utf8') !== '') {
+        if (data.toString('utf8') !== '') {
+          const lastBlock = data.slice(
+            data.lastIndexOf(DELIMITER, undefined, 'utf8'),
+            data.byteLength,
+          );
+          data = data.slice(0, data.lastIndexOf(DELIMITER, undefined, 'utf8'));
+          blocks.push(await parseFileData(lastBlock));
+        }
+      }
+    } else {
+      resolve(null);
+    }
+  });
+};
+
+export const jitcoinFileByNumber = (nmbr: number): string => {
+  return BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(nmbr));
 };

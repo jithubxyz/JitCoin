@@ -20,6 +20,7 @@ import {
   deleteLastBlock,
   lengthLastBlockFile,
   jitcoinFileByNumber,
+  getFileAsArray,
 } from './misc/helper';
 import { Transaction, Data, Block } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
@@ -215,6 +216,35 @@ app.post('/length', express.json(), async (req, res) => {
   } else {
     res.json({
       message: 'No length found!😞',
+      code: RESPONSE_CODES.ERROR,
+    } as BlockResponse);
+  }
+});
+
+app.post('/fileAsArray', express.json(), async (req, res) => {
+  const body = req.body;
+  const fileNumber = body.file as number;
+  let file = null;
+  if (fileNumber !== null || fileNumber !== undefined) {
+    file = jitcoinFileByNumber(fileNumber);
+  }
+  const blocks = await getFileAsArray(file);
+  if (blocks !== null) {
+    const response = [];
+    for (const block of blocks) {
+      response.push([
+        await getJSONHeaderFromBlock(block),
+        await getJSONBody(block.data.transactions),
+      ]);
+    }
+    res.json({
+      message: 'Blocks found!',
+      code: RESPONSE_CODES.PASS,
+      data: response,
+    } as BlockResponse);
+  } else {
+    res.json({
+      message: 'No Blocks found!😞',
       code: RESPONSE_CODES.ERROR,
     } as BlockResponse);
   }

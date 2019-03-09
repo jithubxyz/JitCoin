@@ -46,9 +46,9 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     const firstBlock = new Block(null, data);
 
-    //await firstBlock.mine();
+    await firstBlock.mine();
 
-    await firstBlock.save();
+    //await firstBlock.save();
 
     elapsedTime = Date.now() - beforeExecution;
 
