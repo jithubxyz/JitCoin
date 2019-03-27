@@ -21,6 +21,7 @@ import {
   lengthLastBlockFile,
   jitcoinFileByNumber,
   getFileAsArray,
+  getJitCoinFile,
 } from './misc/helper';
 import { Transaction, Data, Block } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
@@ -203,7 +204,7 @@ app.post('/length', express.json(), async (req, res) => {
   const body = req.body;
   const fileNumber = body.file as number;
   let file = null;
-  if (fileNumber !== null) {
+  if (fileNumber !== null && fileNumber !== undefined) {
     file = jitcoinFileByNumber(fileNumber);
   }
   const count = await lengthLastBlockFile(file);

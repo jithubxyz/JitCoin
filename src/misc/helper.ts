@@ -414,7 +414,7 @@ const jitcoinPathExists = async () => {
  * @author Flo Dörr
  * @returns {string} current file
  */
-const getJitCoinFile = async (): Promise<string> => {
+export const getJitCoinFile = async (): Promise<string> => {
   const files = await readDir(BLOCKCHAIN_DIR);
   if (files.length === 0) {
     const file =
@@ -554,6 +554,7 @@ export const getFileAsArray = (
           blocks.push(await parseFileData(lastBlock));
         }
       }
+      resolve(blocks.reverse());
     } else {
       resolve(null);
     }
@@ -561,5 +562,5 @@ export const getFileAsArray = (
 };
 
 export const jitcoinFileByNumber = (nmbr: number): string => {
-  return BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(nmbr));
+  return BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(nmbr ? nmbr : 0));
 };
