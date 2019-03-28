@@ -22,6 +22,7 @@ import {
   jitcoinFileByNumber,
   getFileAsArray,
   getJitCoinFile,
+  getFileCount,
 } from './misc/helper';
 import { Transaction, Data, Block } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
@@ -30,13 +31,13 @@ const app = express();
 app.get('/mine', express.json(), async (req, res) => {
   const block = await getLastBlock();
   if (block !== null) {
-    if (block.data.transactions.length === TRANSACTIONS_PER_BLOCK) {
-      if (
-        getBlockHash(block.data.getData(), block.nonce).substring(
-          0,
-          DIFFICULTY,
-        ) !== getZeroString()
-      ) {
+    if (
+      getBlockHash(block.data.getData(), block.nonce).substring(
+        0,
+        DIFFICULTY,
+      ) !== getZeroString()
+    ) {
+      if (block.data.transactions.length === TRANSACTIONS_PER_BLOCK) {
         await deleteLastBlock();
         await block.mine();
         const header = getJSONHeaderFromBlock(block);
@@ -48,10 +49,15 @@ app.get('/mine', express.json(), async (req, res) => {
         } as BlockResponse);
       } else {
         res.json({
-          message: 'This Block was already mined!😞',
-          code: RESPONSE_CODES.ALREADY_MINED,
+          message: 'This Block is not full!😞',
+          code: RESPONSE_CODES.NOT_FULL,
         } as BlockResponse);
       }
+    } else {
+      res.json({
+        message: 'This Block was already mined!😞',
+        code: RESPONSE_CODES.ALREADY_MINED,
+      } as BlockResponse);
     }
   } else {
     res.json({
@@ -96,17 +102,14 @@ app.post('/addTransaction', express.json(), async (req, res) => {
       } else {
         if (
           block.hash === '' &&
-          block.data.transactions.length === TRANSACTIONS_PER_BLOCK
+          block.data.transactions.length >= TRANSACTIONS_PER_BLOCK
         ) {
           res.json({
             message:
               'The last block is already full and has to be mined first!😞',
             code: RESPONSE_CODES.MINE_BLOCK,
           } as BlockResponse);
-        } else if (
-          block.hash !== '' &&
-          block.data.transactions.length === TRANSACTIONS_PER_BLOCK
-        ) {
+        } else if (block.hash !== '') {
           res.json({
             message:
               'The last block was already mined but no new block was created yet!😞',
@@ -168,7 +171,7 @@ app.post('/newBlock', express.json(), async (req, res) => {
       const header = getJSONHeaderFromBlock(block);
       const body = getJSONBody(block.data.transactions);
       res.json({
-        message: 'The new Block was created successfully!😠',
+        message: 'The new Block was created successfully!👍',
         code: RESPONSE_CODES.PASS,
         data: [header, body],
       } as BlockResponse);
@@ -189,7 +192,7 @@ app.post('/newBlock', express.json(), async (req, res) => {
 app.get('/deleteLastBlock', express.json(), async (req, res) => {
   if (await deleteLastBlock()) {
     res.json({
-      message: 'The Block was deleted!',
+      message: 'The Block was deleted!👍',
       code: RESPONSE_CODES.PASS,
     } as BlockResponse);
   } else {
@@ -202,15 +205,15 @@ app.get('/deleteLastBlock', express.json(), async (req, res) => {
 
 app.post('/length', express.json(), async (req, res) => {
   const body = req.body;
-  const fileNumber = body.file as number;
+  const fileNumber = body.file;
   let file = null;
-  if (fileNumber !== null && fileNumber !== undefined) {
+  if (fileNumber !== null) {
     file = jitcoinFileByNumber(fileNumber);
   }
   const count = await lengthLastBlockFile(file);
   if (count !== null) {
     res.json({
-      message: 'Length found!',
+      message: 'Length found!👍',
       code: RESPONSE_CODES.PASS,
       data: count,
     } as BlockResponse);
@@ -224,9 +227,9 @@ app.post('/length', express.json(), async (req, res) => {
 
 app.post('/fileAsArray', express.json(), async (req, res) => {
   const body = req.body;
-  const fileNumber = body.file as number;
+  const fileNumber = body.file;
   let file = null;
-  if (fileNumber !== null || fileNumber !== undefined) {
+  if (fileNumber !== undefined) {
     file = jitcoinFileByNumber(fileNumber);
   }
   const blocks = await getFileAsArray(file);
@@ -239,7 +242,7 @@ app.post('/fileAsArray', express.json(), async (req, res) => {
       ]);
     }
     res.json({
-      message: 'Blocks found!',
+      message: 'Blocks found!👍',
       code: RESPONSE_CODES.PASS,
       data: response,
     } as BlockResponse);
@@ -247,6 +250,23 @@ app.post('/fileAsArray', express.json(), async (req, res) => {
     res.json({
       message: 'No Blocks found!😞',
       code: RESPONSE_CODES.ERROR,
+    } as BlockResponse);
+  }
+});
+
+app.get('/fileCount', express.json(), async (req, res) => {
+  const count = await getFileCount();
+  if (count !== -1) {
+    res.json({
+      message: 'File count found!👍',
+      code: RESPONSE_CODES.PASS,
+      data: count,
+    } as BlockResponse);
+  } else {
+    res.json({
+      message: 'JitCoin Path was not found.😞',
+      code: RESPONSE_CODES.PATH_NOT_FOUND,
+      data: count,
     } as BlockResponse);
   }
 });

@@ -25,10 +25,20 @@ import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
 import { createHash } from 'crypto';
 import { promisify } from 'util';
 import { deflate, inflate } from 'zlib';
+import { resolve } from 'path';
 
 const write = promisify(writeFile);
 
-const read = promisify(readFile);
+const read = (path: string): Promise<Buffer> =>
+  new Promise(resolve => {
+    readFile(path, (err, data) => {
+      if (err) {
+        resolve(undefined);
+      } else {
+        resolve(data);
+      }
+    });
+  });
 
 const readDir = (path: string): Promise<string[]> =>
   new Promise((resolve, reject) => {
@@ -511,21 +521,18 @@ export const getZeroString = (): string => {
  * @returns {number | null} length of lastBlockFile
  */
 export const lengthLastBlockFile = (
-  file?: string | null,
+  file: string | null,
 ): Promise<number | null> => {
   return new Promise(async resolve => {
-    if (file === null || file === undefined) {
-      file = await getJitCoinFile();
+    if (file === null) {
+      file = await lastJitCoinFile();
     }
-    let data: Buffer = (await read(file)) as Buffer;
-    let counter = 0;
-    while (data.toString('utf8') !== '') {
-      if (data.toString('utf8') !== '') {
-        data = data.slice(0, data.lastIndexOf(DELIMITER, undefined, 'utf8'));
-        counter++;
-      }
+    const data: Buffer = await read(file);
+    if (data !== undefined) {
+      resolve(data.toString().split(DELIMITER).length - 1);
+    } else {
+      resolve(null);
     }
-    resolve(counter);
   });
 };
 
@@ -539,18 +546,21 @@ export const getFileAsArray = (
 ): Promise<Block[] | null> => {
   return new Promise(async resolve => {
     if (file === null || file === undefined) {
-      file = await getJitCoinFile();
+      file = await lastJitCoinFile();
     }
-    let data: Buffer = (await read(file)) as Buffer;
-    if (data !== null || data !== undefined) {
+    let data = await read(file);
+    if (data != null || data !== undefined) {
       const blocks: Block[] = [];
-      while (data.toString('utf8') !== '') {
-        if (data.toString('utf8') !== '') {
-          const lastBlock = data.slice(
-            data.lastIndexOf(DELIMITER, undefined, 'utf8'),
-            data.byteLength,
+      while (data!.toString('utf8') !== '') {
+        if (data!.toString('utf8') !== '') {
+          const lastBlock = data!.slice(
+            data!.lastIndexOf(DELIMITER, undefined, 'utf8'),
+            data!.byteLength,
           );
-          data = data.slice(0, data.lastIndexOf(DELIMITER, undefined, 'utf8'));
+          data = data!.slice(
+            0,
+            data!.lastIndexOf(DELIMITER, undefined, 'utf8'),
+          );
           blocks.push(await parseFileData(lastBlock));
         }
       }
@@ -562,5 +572,29 @@ export const getFileAsArray = (
 };
 
 export const jitcoinFileByNumber = (nmbr: number): string => {
-  return BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(nmbr ? nmbr : 0));
+  return (
+    BLOCKCHAIN_DIR +
+    '/' +
+    JITCOIN_FILE.replace('$', appendZeros(nmbr ? nmbr : 0))
+  );
+};
+
+const lastJitCoinFile = async (): Promise<string> => {
+  const files = await readDir(BLOCKCHAIN_DIR);
+  if (files.length === 0) {
+    const file =
+      BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(0));
+    await write(file, '');
+    return file;
+  }
+  return BLOCKCHAIN_DIR + '/' + files[files.length - 1];
+};
+
+export const getFileCount = async (): Promise<number> => {
+  if (await jitcoinPathExists()) {
+    const files = await readDir(BLOCKCHAIN_DIR);
+    return files.length;
+  } else {
+    return -1;
+  }
 };
