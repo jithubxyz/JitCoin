@@ -4,8 +4,6 @@ import {
   TRANSACTIONS_PER_BLOCK,
   RESPONSE_CODES,
   DIFFICULTY,
-  BLOCKCHAIN_DIR,
-  JITCOIN_FILE,
 } from './misc/constants';
 import {
   getRandomHash,
@@ -16,16 +14,18 @@ import {
   getZeroString,
   getJSONHeaderFromBlock,
   isHashMined,
-  updateLastBlock,
   deleteLastBlock,
   lengthLastBlockFile,
   jitcoinFileByNumber,
   getFileAsArray,
-  getJitCoinFile,
   getFileCount,
+  checkWallet,
 } from './misc/helper';
 import { Transaction, Data, Block } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
+
+let passphrase: string;
+
 const app = express();
 
 app.get('/mine', express.json(), async (req, res) => {
@@ -254,7 +254,7 @@ app.post('/fileAsArray', express.json(), async (req, res) => {
   }
 });
 
-app.get('/fileCount', express.json(), async (req, res) => {
+app.get('/fileCount', express.json(), async (_req, res) => {
   const count = await getFileCount();
   if (count !== -1) {
     res.json({
@@ -269,6 +269,16 @@ app.get('/fileCount', express.json(), async (req, res) => {
       data: count,
     } as BlockResponse);
   }
+});
+
+app.post('/initWallet', express.json(), async (req, res) => {
+  const body = req.body;
+  passphrase = body.passphrase;
+  await checkWallet(passphrase);
+  res.json({
+    message: 'Passphrase was saved.👍',
+    code: RESPONSE_CODES.PASSPHRASE_SAVED,
+  } as BlockResponse);
 });
 
 app.listen(PORT, () => {

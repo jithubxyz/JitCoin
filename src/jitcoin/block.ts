@@ -190,20 +190,23 @@ export class Data {
  * @class Transaction
  */
 export class Transaction {
-  userId: string;
+  signingHash: string;
+  publicKey: string;
   randomHash: string;
   amount: number;
 
   /**
    * Creates an instance of Transaction.
    * @date 2019-01-31
-   * @param {string} userId the id of the user issuing the transaction
+   * @param {string} signingHash the hash of the transaction signed by the private key
+   * @param {string} publicKey the public key of the issuer
    * @param {string} randomHash the randomly by every user generate user
    * @param {number} amount the amount of JitCoins to be betted
    * @memberof Transaction
    */
-  constructor(userId: string, randomHash: string, amount: number) {
-    this.userId = userId;
+  constructor(signingHash: string, publicKey: string, randomHash: string, amount: number) {
+    this.signingHash = signingHash;
+    this.publicKey = publicKey;
     this.randomHash = randomHash;
     this.amount = amount;
   }

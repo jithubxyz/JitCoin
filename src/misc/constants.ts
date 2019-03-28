@@ -11,11 +11,19 @@ export const DIFFICULTY = 1;
 
 export const JITCOIN_DIR = './.jitcoin';
 
-export const BLOCKCHAIN_DIR = './.jitcoin/blockchain';
+export const BLOCKCHAIN_DIR = `${JITCOIN_DIR}/blockchain`;
+
+export const WALLET_DIR = `${JITCOIN_DIR}/wallet`;
 
 export const JITCOIN_FILE_STARTER = 'blk';
 
 export const JITCOIN_FILE_ENDING = '.jit';
+
+export const WALLET_FILE_STARTER = 'wallet';
+
+export const PUBLIC_KEY_FILE_ENDING = '.pub.jit';
+
+export const PRIVATE_KEY_FILE_ENDING = '.priv.jit';
 
 export const JITCOIN_FILE = `${JITCOIN_FILE_STARTER}$${JITCOIN_FILE_ENDING}`;
 
@@ -45,4 +53,5 @@ export enum RESPONSE_CODES {
   NOT_FULL,
   NOT_YET_MINED,
   PATH_NOT_FOUND,
+  PASSPHRASE_SAVED,
 }

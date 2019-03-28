@@ -7,6 +7,7 @@ import {
   Stats,
   readdir,
   readFile,
+  exists
 } from 'fs-extra';
 import {
   VERSION,
@@ -19,15 +20,20 @@ import {
   JITCOIN_FILE_STARTER,
   JITCOIN_FILE_ENDING,
   DIFFICULTY,
+  WALLET_DIR,
+  PUBLIC_KEY_FILE_ENDING,
+  PRIVATE_KEY_FILE_ENDING,
+  WALLET_FILE_STARTER,
 } from './constants';
 import { Transaction, Block, Data } from '../jitcoin/block';
 import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
-import { createHash } from 'crypto';
+import { createHash, generateKeyPair, createHmac } from 'crypto';
 import { promisify } from 'util';
 import { deflate, inflate } from 'zlib';
-import { resolve } from 'path';
 
 const write = promisify(writeFile);
+
+const fileExists = promisify(exists);
 
 const read = (path: string): Promise<Buffer> =>
   new Promise(resolve => {
@@ -81,6 +87,8 @@ const decompress = (buffer: Buffer): Promise<Buffer> => {
     });
   });
 };
+
+const key = promisify(generateKeyPair);
 
 /**
  *
@@ -413,10 +421,13 @@ const createDir = async () => {
   if (!(await pathExists(BLOCKCHAIN_DIR))) {
     await mkdirp(BLOCKCHAIN_DIR);
   }
+  if (!(await pathExists(WALLET_DIR))) {
+    await mkdirp(WALLET_DIR);
+  }
 };
 
 const jitcoinPathExists = async () => {
-  return (await pathExists(JITCOIN_DIR)) && (await pathExists(BLOCKCHAIN_DIR));
+  return (await pathExists(JITCOIN_DIR)) && (await pathExists(BLOCKCHAIN_DIR)) && (await pathExists(WALLET_DIR));
 };
 
 /**
@@ -598,3 +609,35 @@ export const getFileCount = async (): Promise<number> => {
     return -1;
   }
 };
+
+export const checkWallet = async (passphrase: string) => {
+  const publicKeyFile = `${WALLET_DIR}/${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`;
+  const privateKeyFile = `${WALLET_DIR}/${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`;
+  if (!(await jitcoinPathExists())) {
+    await createDir();
+  }
+  if (!(await fileExists(publicKeyFile) && await fileExists(privateKeyFile))) {
+    const { publicKey, privateKey } = await key('rsa', {
+      modulusLength: 4096,
+      publicKeyEncoding: {
+        type: 'spki',
+        format: 'pem',
+      },
+      privateKeyEncoding: {
+        type: 'pkcs8',
+        format: 'pem',
+        cipher: 'aes-256-cbc',
+        passphrase,
+      }
+    });
+    await write(publicKeyFile, publicKey);
+    await write(privateKeyFile, privateKey);
+  }
+};
+
+export const signTransaction = (amount: number, randomHash: string, publicKey: string, privateKey: string, passphrase: string) => {
+  return createHash('sha512')
+    .update(`${amount}${randomHash}${publicKey}`)
+    .digest()
+    .toString('hex');
+}
