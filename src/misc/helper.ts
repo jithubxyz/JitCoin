@@ -7,7 +7,7 @@ import {
   Stats,
   readdir,
   readFile,
-  exists
+  exists,
 } from 'fs-extra';
 import {
   VERSION,
@@ -27,7 +27,12 @@ import {
 } from './constants';
 import { Transaction, Block, Data } from '../jitcoin/block';
 import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
-import { createHash, generateKeyPair, createHmac } from 'crypto';
+import {
+  createHash,
+  generateKeyPair,
+  createHmac,
+  privateDecrypt,
+} from 'crypto';
 import { promisify } from 'util';
 import { deflate, inflate } from 'zlib';
 
@@ -217,6 +222,7 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
     for (const transactionItem of decompressedBody.transactions) {
       const transaction = new Transaction(
         transactionItem.userId,
+        await getPublicKey(),
         transactionItem.randomHash,
         transactionItem.amount,
       );
@@ -398,7 +404,7 @@ export const getJSONBody = (transactions: Transaction[]): BlockBody => {
     trans.push({
       amount: transaction.amount,
       randomHash: transaction.randomHash,
-      userId: transaction.userId,
+      userId: transaction.signingHash,
     } as TransactionElement);
   }
 
@@ -427,7 +433,11 @@ const createDir = async () => {
 };
 
 const jitcoinPathExists = async () => {
-  return (await pathExists(JITCOIN_DIR)) && (await pathExists(BLOCKCHAIN_DIR)) && (await pathExists(WALLET_DIR));
+  return (
+    (await pathExists(JITCOIN_DIR)) &&
+    (await pathExists(BLOCKCHAIN_DIR)) &&
+    (await pathExists(WALLET_DIR))
+  );
 };
 
 /**
@@ -616,7 +626,9 @@ export const checkWallet = async (passphrase: string) => {
   if (!(await jitcoinPathExists())) {
     await createDir();
   }
-  if (!(await fileExists(publicKeyFile) && await fileExists(privateKeyFile))) {
+  if (
+    !((await fileExists(publicKeyFile)) && (await fileExists(privateKeyFile)))
+  ) {
     const { publicKey, privateKey } = await key('rsa', {
       modulusLength: 4096,
       publicKeyEncoding: {
@@ -628,16 +640,33 @@ export const checkWallet = async (passphrase: string) => {
         format: 'pem',
         cipher: 'aes-256-cbc',
         passphrase,
-      }
+      },
     });
     await write(publicKeyFile, publicKey);
     await write(privateKeyFile, privateKey);
   }
 };
 
-export const signTransaction = (amount: number, randomHash: string, publicKey: string, privateKey: string, passphrase: string) => {
-  return createHash('sha512')
-    .update(`${amount}${randomHash}${publicKey}`)
-    .digest()
-    .toString('hex');
-}
+export const signTransaction = async (
+  amount: number,
+  randomHash: string,
+  passphrase: string,
+) => {
+  const publicKeyFile = `${WALLET_DIR}/${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`;
+  const privateKeyFile = `${WALLET_DIR}/${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`;
+  if ((await fileExists(publicKeyFile)) && (await fileExists(privateKeyFile))) {
+    const privateKey = (await read(privateKeyFile)).toString();
+    const publicKey = (await read(publicKeyFile)).toString();
+    const hmac = createHmac('sha512', privateKey);
+    hmac.update(`${amount}${randomHash}${publicKey}`);
+    return hmac.digest('hex');
+  } else {
+    return null;
+  }
+};
+
+export const getPublicKey = async (): Promise<string> => {
+  return (await read(
+    `${WALLET_DIR}/${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`,
+  )).toString();
+};

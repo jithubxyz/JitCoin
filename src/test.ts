@@ -1,7 +1,12 @@
 import { Blockchain } from './jitcoin/blockchain';
 import { Block, Data, Transaction } from './jitcoin/block';
 import { prompt } from 'inquirer';
-import { getBlockHash, getLastBlock, getRandomHash } from './misc/helper';
+import {
+  getBlockHash,
+  getLastBlock,
+  getRandomHash,
+  getPublicKey,
+} from './misc/helper';
 
 let beforeExecution;
 
@@ -42,7 +47,7 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
   } else {
     beforeExecution = Date.now();
 
-    const data = getRandomData();
+    const data = await getRandomData();
 
     const firstBlock = new Block(null, data);
 
@@ -109,7 +114,7 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
         blockchain.blocks[blockchain.blocks.length - 1].data.getData(),
         blockchain.blocks[blockchain.blocks.length - 1].nonce,
       ),
-      getRandomData(),
+      await getRandomData(),
     );
 
     await block.mine();
@@ -153,18 +158,19 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
   }
 }
 
-function getRandomData(): Data {
-  const transaction = getRandomTransaction();
+async function getRandomData(): Promise<Data> {
+  const transaction = await getRandomTransaction();
   const data = new Data(transaction);
   for (let i = 0; i < 6; i++) {
-    data.addTransaction(getRandomTransaction());
+    data.addTransaction(await getRandomTransaction());
   }
   return data;
 }
 
-function getRandomTransaction(): Transaction {
+async function getRandomTransaction(): Promise<Transaction> {
   return new Transaction(
     getRandomHash(),
+    await getPublicKey(),
     getRandomHash(),
     Math.round(Math.random() * (40 - 1) + 1),
   );

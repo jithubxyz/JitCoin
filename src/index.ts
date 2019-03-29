@@ -20,6 +20,8 @@ import {
   getFileAsArray,
   getFileCount,
   checkWallet,
+  signTransaction,
+  getPublicKey,
 } from './misc/helper';
 import { Transaction, Data, Block } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
@@ -83,7 +85,12 @@ app.post('/addTransaction', express.json(), async (req, res) => {
         block.hash === '' &&
         block.data.transactions.length < TRANSACTIONS_PER_BLOCK
       ) {
-        const transaction = new Transaction(userId, randomHash, amount);
+        const transaction = new Transaction(
+          userId,
+          await getPublicKey(),
+          randomHash,
+          amount,
+        );
         if (await updateLastBlockData(transaction)) {
           const block = (await getLastBlock())!!;
           const header = getJSONHeaderFromBlock(block);
@@ -162,6 +169,7 @@ app.post('/newBlock', express.json(), async (req, res) => {
     if (isHashMined(previousHash)) {
       const transaction = new Transaction(
         userId ? userId : getRandomHash(),
+        await getPublicKey(),
         getRandomHash(),
         amount,
       );
@@ -275,8 +283,9 @@ app.post('/initWallet', express.json(), async (req, res) => {
   const body = req.body;
   passphrase = body.passphrase;
   await checkWallet(passphrase);
+  const hex = await signTransaction(50, getRandomHash());
   res.json({
-    message: 'Passphrase was saved.👍',
+    message: 'Passphrase was saved.👍' + hex,
     code: RESPONSE_CODES.PASSPHRASE_SAVED,
   } as BlockResponse);
 });
