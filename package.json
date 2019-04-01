@@ -4,7 +4,24 @@
   "description": "A JitCoin written in TypeScript.",
   "main": "test.js",
   "repository": "https://github.com/jithubxyz/JitCoin.git",
-  "author": "flokol120 <flo@xn--drr-sna.site>",
+  "authors": [
+    {
+      "name": "flokol120",
+      "email": "flo@xn--drr-sna.site"
+    },
+    {
+      "name": "Pixelality",
+      "email": "eleftherios.pavlidis1@gmail.com"
+    },
+    {
+      "name": "Tim Weiß",
+      "email": "tim@weiss.moe"
+    },
+    {
+      "name": "Bruno Scheufler",
+      "email": "bruno@brunoscheufler.com"
+    }
+  ],
   "license": "MIT",
   "devDependencies": {
     "@types/express": "^4.16.1",
