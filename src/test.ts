@@ -1,6 +1,5 @@
 import { Blockchain } from './jitcoin/blockchain';
 import { Block, Data, Transaction } from './jitcoin/block';
-import { createHash } from 'crypto';
 import { prompt } from 'inquirer';
 import { getBlockHash, getLastBlock, getRandomHash } from './misc/helper';
 
@@ -45,11 +44,11 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     const data = getRandomData();
 
-    const firstBlock = new Block(null, data, null, null, zeroCount);
+    const firstBlock = new Block(null, data);
 
-    //await firstBlock.mine();
+    await firstBlock.mine();
 
-    await firstBlock.save();
+    //await firstBlock.save();
 
     elapsedTime = Date.now() - beforeExecution;
 
@@ -111,12 +110,9 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
         blockchain.blocks[blockchain.blocks.length - 1].nonce,
       ),
       getRandomData(),
-      null,
-      null,
-      zeroCount,
     );
 
-    //await block.mine();
+    await block.mine();
 
     blockchain.addBlock(block);
 
@@ -160,7 +156,7 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 function getRandomData(): Data {
   const transaction = getRandomTransaction();
   const data = new Data(transaction);
-  for (let i = 0; i < 9; i++) {
+  for (let i = 0; i < 6; i++) {
     data.addTransaction(getRandomTransaction());
   }
   return data;

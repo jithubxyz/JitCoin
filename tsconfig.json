@@ -1,12 +1,14 @@
 {
   "extends": "./node_modules/gts/tsconfig-google.json",
   "compilerOptions": {
+    "module": "commonjs",
     "rootDir": ".",
     "outDir": "build",
     "target": "esnext",
     "lib": ["esnext"],
+    "sourceMap": true
   },
-  "lib": [ "esnext", "dom" ],
+  "lib": ["esnext", "dom"],
   "target": "esnext",
   "include": [
     "src/*.ts",
