@@ -283,7 +283,7 @@ app.post('/initWallet', express.json(), async (req, res) => {
   const body = req.body;
   passphrase = body.passphrase;
   await checkWallet(passphrase);
-  const hex = await signTransaction(50, getRandomHash());
+  const hex = await signTransaction(50, getRandomHash(), passphrase);
   res.json({
     message: 'Passphrase was saved.👍' + hex,
     code: RESPONSE_CODES.PASSPHRASE_SAVED,

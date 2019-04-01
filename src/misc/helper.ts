@@ -31,14 +31,29 @@ import {
   createHash,
   generateKeyPair,
   createHmac,
-  privateDecrypt,
+  createPrivateKey,
+  RSAKeyPairOptions,
+  generateKeyPairSync,
 } from 'crypto';
-import { promisify } from 'util';
 import { deflate, inflate } from 'zlib';
 
-const write = promisify(writeFile);
+const write = (file: string, data: string | Buffer): Promise<boolean> =>
+  new Promise(resolve => {
+    writeFile(file, data, (err) => {
+      if(err){
+        resolve(false);
+      }else{
+        resolve(true);
+      }
+    });
+  });
 
-const fileExists = promisify(exists);
+const fileExists = (path: string): Promise<boolean> =>
+  new Promise(resolve => {
+    exists(path, (exists) => {
+      resolve(exists);
+    });
+  });
 
 const read = (path: string): Promise<Buffer> =>
   new Promise(resolve => {
@@ -92,8 +107,16 @@ const decompress = (buffer: Buffer): Promise<Buffer> => {
     });
   });
 };
-
-const key = promisify(generateKeyPair);
+const key = (type: "rsa", options: RSAKeyPairOptions<"pem", "pem">): Promise<{privateKey: string, publicKey: string} | null> =>
+  new Promise(resolve => {
+    generateKeyPair(type, options, (err, publicKey, privateKey) => {
+      if(err){
+        resolve(null);
+      }else{
+        resolve({privateKey, publicKey});
+      }
+    });
+  });
 
 /**
  *
@@ -629,7 +652,7 @@ export const checkWallet = async (passphrase: string) => {
   if (
     !((await fileExists(publicKeyFile)) && (await fileExists(privateKeyFile)))
   ) {
-    const { publicKey, privateKey } = await key('rsa', {
+    /*const keys = await key('rsa', {
       modulusLength: 4096,
       publicKeyEncoding: {
         type: 'spki',
@@ -641,7 +664,20 @@ export const checkWallet = async (passphrase: string) => {
         cipher: 'aes-256-cbc',
         passphrase,
       },
-    });
+    });*/
+    const {privateKey, publicKey} = generateKeyPairSync('rsa', {
+      modulusLength: 4096,
+      publicKeyEncoding: {
+        type: 'spki',
+        format: 'pem',
+      },
+      privateKeyEncoding: {
+        type: 'pkcs8',
+        format: 'pem',
+        cipher: 'aes-256-cbc',
+        passphrase,
+      },
+    })
     await write(publicKeyFile, publicKey);
     await write(privateKeyFile, privateKey);
   }
@@ -656,8 +692,15 @@ export const signTransaction = async (
   const privateKeyFile = `${WALLET_DIR}/${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`;
   if ((await fileExists(publicKeyFile)) && (await fileExists(privateKeyFile))) {
     const privateKey = (await read(privateKeyFile)).toString();
+    const keyObject = createPrivateKey(privateKey);
+    const decryptedPrivateKey = keyObject.export({
+      type: 'pkcs8',
+      format: 'pem',
+      cipher: 'aes-256-cbc',
+      passphrase,
+    });
     const publicKey = (await read(publicKeyFile)).toString();
-    const hmac = createHmac('sha512', privateKey);
+    const hmac = createHmac('sha512', decryptedPrivateKey);
     hmac.update(`${amount}${randomHash}${publicKey}`);
     return hmac.digest('hex');
   } else {

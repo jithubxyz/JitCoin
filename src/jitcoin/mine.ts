@@ -3,9 +3,9 @@ import { getBlockHash, getZeroString, isHashMined } from '../misc/helper';
 import { stdout as log } from 'single-line-log';
 import { DIFFICULTY } from '../misc/constants';
 
-if (process !== undefined && process.send !== undefined) {
+if (process !== undefined && !process.send) {
   process.on('message', async (message: MiningChild) => {
-    process.send = process.send || (() => {});
+    process.send = process.send!;
     const steps = message.steps;
     let nonce = message.startingNonce - steps;
     const data = message.data;
