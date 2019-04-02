@@ -169,7 +169,6 @@ async function getRandomData(): Promise<Data> {
 
 async function getRandomTransaction(): Promise<Transaction> {
   return new Transaction(
-    getRandomHash(),
     await getPublicKey(),
     getRandomHash(),
     Math.round(Math.random() * (40 - 1) + 1),

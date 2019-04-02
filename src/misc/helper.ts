@@ -34,6 +34,11 @@ import {
   createPrivateKey,
   RSAKeyPairOptions,
   generateKeyPairSync,
+  privateEncrypt,
+  createSign,
+  createVerify,
+  createPublicKey,
+  createCipheriv,
 } from 'crypto';
 import { deflate, inflate } from 'zlib';
 
@@ -244,7 +249,6 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
 
     for (const transactionItem of decompressedBody.transactions) {
       const transaction = new Transaction(
-        transactionItem.userId,
         await getPublicKey(),
         transactionItem.randomHash,
         transactionItem.amount,
@@ -427,7 +431,8 @@ export const getJSONBody = (transactions: Transaction[]): BlockBody => {
     trans.push({
       amount: transaction.amount,
       randomHash: transaction.randomHash,
-      userId: transaction.signingHash,
+      signature: transaction.signature,
+      publicKey: transaction.publicKey,
     } as TransactionElement);
   }
 
@@ -677,7 +682,8 @@ export const checkWallet = async (passphrase: string) => {
         cipher: 'aes-256-cbc',
         passphrase,
       },
-    })
+    });
+    console.log('created new private and public key!');
     await write(publicKeyFile, publicKey);
     await write(privateKeyFile, privateKey);
   }
@@ -691,18 +697,15 @@ export const signTransaction = async (
   const publicKeyFile = `${WALLET_DIR}/${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`;
   const privateKeyFile = `${WALLET_DIR}/${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`;
   if ((await fileExists(publicKeyFile)) && (await fileExists(privateKeyFile))) {
-    const privateKey = (await read(privateKeyFile)).toString();
-    const keyObject = createPrivateKey(privateKey);
-    const decryptedPrivateKey = keyObject.export({
-      type: 'pkcs8',
-      format: 'pem',
-      cipher: 'aes-256-cbc',
+    const privateKey = await read(privateKeyFile);
+    const keyObject = createPrivateKey({
+      key: privateKey,
       passphrase,
     });
     const publicKey = (await read(publicKeyFile)).toString();
-    const hmac = createHmac('sha512', decryptedPrivateKey);
-    hmac.update(`${amount}${randomHash}${publicKey}`);
-    return hmac.digest('hex');
+    const sign = createSign('RSA-SHA512');
+    sign.update(`${amount}${randomHash}${publicKey}`);
+    return sign.sign(keyObject, 'hex');
   } else {
     return null;
   }
@@ -710,6 +713,15 @@ export const signTransaction = async (
 
 export const getPublicKey = async (): Promise<string> => {
   return (await read(
-    `${WALLET_DIR}/${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`,
+    `${WALLET_DIR}/${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`,
   )).toString();
+};
+
+export const verifySigniture = (amount: number, randomHash: string, publicKey: string, signature: string) => {
+  const keyObject = createPublicKey({
+    key: publicKey,
+  });
+  const verify = createVerify('RSA-SHA512');
+  verify.update(`${amount}${randomHash}${publicKey}`);
+  return verify.verify(keyObject, signature, 'hex');
 };

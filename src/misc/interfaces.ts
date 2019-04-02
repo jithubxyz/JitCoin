@@ -17,7 +17,8 @@ export interface BlockBody {
 }
 
 export interface TransactionElement {
-  userId: string;
+  publicKey: string;
+  signature: string;
   randomHash: string;
   amount: number;
 }

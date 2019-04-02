@@ -1,5 +1,5 @@
 import { stringify } from 'querystring';
-import { saveBinaryHex, getBlockHash, getZeroString, isHashMined } from '../misc/helper';
+import { saveBinaryHex, getBlockHash, getZeroString, isHashMined, signTransaction, verifySigniture } from '../misc/helper';
 import { fork, ChildProcess } from 'child_process';
 import { cpus } from 'os';
 import { stdout as log } from 'single-line-log';
@@ -190,7 +190,7 @@ export class Data {
  * @class Transaction
  */
 export class Transaction {
-  signingHash: string;
+  signature: string | null = null;
   publicKey: string;
   randomHash: string;
   amount: number;
@@ -198,14 +198,12 @@ export class Transaction {
   /**
    * Creates an instance of Transaction.
    * @date 2019-01-31
-   * @param {string} signingHash the hash of the transaction signed by the private key
    * @param {string} publicKey the public key of the issuer
    * @param {string} randomHash the randomly by every user generate user
    * @param {number} amount the amount of JitCoins to be betted
    * @memberof Transaction
    */
-  constructor(signingHash: string, publicKey: string, randomHash: string, amount: number) {
-    this.signingHash = signingHash;
+  constructor(publicKey: string, randomHash: string, amount: number) {
     this.publicKey = publicKey;
     this.randomHash = randomHash;
     this.amount = amount;
@@ -219,5 +217,27 @@ export class Transaction {
    */
   getData(): string {
     return stringify(this);
+  }
+
+  /**
+   *
+   * @date 2019-01-31
+   * @memberof Transaction
+   */
+  async sign(passphrase: string) {
+    this.signature = await signTransaction(this.amount, this.randomHash, passphrase);
+  }
+
+  /**
+   *
+   * @date 2019-01-31
+   * @memberof Transaction
+   */
+  verify(): boolean {
+    if(this.signature !== null){
+      return verifySigniture(this.amount, this.randomHash, this.publicKey, this.signature);
+    }else{
+      return false;
+    }
   }
 }
