@@ -7,7 +7,7 @@ export const VERSION = 1;
 
 export const TRANSACTIONS_PER_BLOCK = 10;
 
-export const DIFFICULTY = 1;
+export const DIFFICULTY = 3;
 
 export const JITCOIN_DIR = './.jitcoin';
 
@@ -56,3 +56,16 @@ export enum RESPONSE_CODES {
   PASSPHRASE_SAVED,
   NO_PASSPHRASE,
 }
+
+// Endpoints
+
+export const MINE = '/mine';
+export const ADD_TRANSACTION = '/addTransaction';
+export const LAST_BLOCK = '/lastBlock';
+export const NEW_BLOCK = '/newBlock';
+export const DELETE_LAST_BLOCK = '/deleteLastBlock';
+export const LENGTH = '/length';
+export const FILE_AS_ARRAY = '/fileAsArray';
+export const FILE_COUNT = '/fileCount';
+export const INIT_WALLET = '/initWallet';
+export const VERIFY_SIGNATURE = '/verifySignature';

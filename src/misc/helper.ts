@@ -249,9 +249,10 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
 
     for (const transactionItem of decompressedBody.transactions) {
       const transaction = new Transaction(
-        await getPublicKey(),
+        transactionItem.publicKey,
         transactionItem.randomHash,
         transactionItem.amount,
+        transactionItem.signature
       );
       if (blockData === null) {
         blockData = new Data(transaction);

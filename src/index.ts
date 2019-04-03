@@ -4,6 +4,16 @@ import {
   TRANSACTIONS_PER_BLOCK,
   RESPONSE_CODES,
   DIFFICULTY,
+  MINE,
+  ADD_TRANSACTION,
+  LAST_BLOCK,
+  VERIFY_SIGNATURE,
+  INIT_WALLET,
+  FILE_COUNT,
+  FILE_AS_ARRAY,
+  LENGTH,
+  DELETE_LAST_BLOCK,
+  NEW_BLOCK,
 } from './misc/constants';
 import {
   getRandomHash,
@@ -31,7 +41,7 @@ let passphrase: string;
 
 const app = express();
 
-app.get('/mine', express.json(), async (req, res) => {
+app.get(MINE, express.json(), async (_, res) => {
   const block = await getLastBlock();
   if (block !== null) {
     if (
@@ -41,46 +51,27 @@ app.get('/mine', express.json(), async (req, res) => {
       ) !== getZeroString()
     ) {
       if (block.data.transactions.length === TRANSACTIONS_PER_BLOCK) {
-        await deleteLastBlock();
         await block.mine();
         const header = getJSONHeaderFromBlock(block);
         const body = getJSONBody(block.data.transactions);
-        res.json({
-          message: 'Block was mined successfully!⛏️',
-          code: RESPONSE_CODES.PASS,
-          data: [header, body],
-        } as BlockResponse);
+        sendResponse(res, 'Block was mined successfully!⛏️', RESPONSE_CODES.PASS, [header, body]);
       } else {
-        res.json({
-          message: 'This Block is not full!😞',
-          code: RESPONSE_CODES.NOT_FULL,
-        } as BlockResponse);
+        sendResponse(res, 'This Block is not full!😞', RESPONSE_CODES.NOT_FULL);
       }
     } else {
-      res.json({
-        message: 'This Block was already mined!😞',
-        code: RESPONSE_CODES.ALREADY_MINED,
-      } as BlockResponse);
+      sendResponse(res, 'This Block was already mined!😞', RESPONSE_CODES.ALREADY_MINED);
     }
   } else {
-    res.json({
-      message: 'There is no Block saved on your disk!😞',
-      code: RESPONSE_CODES.NO_BLOCK_ON_DISK,
-    } as BlockResponse);
+    sendResponse(res, 'There is no Block saved on your disk!😞', RESPONSE_CODES.NO_BLOCK_ON_DISK);
   }
 });
 
-app.post('/addTransaction', express.json(), async (req, res) => {
+app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
   const body = req.body;
   const amount: number | undefined = body.amount;
   if(passphrase !== undefined){
     if (amount !== undefined) {
       const randomHash: string = getRandomHash();
-      let userId: string | undefined = body.userId;
-  
-      if (userId === undefined) {
-        userId = getRandomHash();
-      }
       const block = await getLastBlock();
       if (block !== null) {
         if (
@@ -97,77 +88,45 @@ app.post('/addTransaction', express.json(), async (req, res) => {
             const block = (await getLastBlock())!!;
             const header = getJSONHeaderFromBlock(block);
             const body = getJSONBody(block.data.transactions);
-            res.json({
-              message: 'Transaction was added successfully!😁',
-              code: RESPONSE_CODES.PASS,
-              data: [header, body],
-            } as BlockResponse);
+            sendResponse(res, 'Transaction was added successfully!😁', RESPONSE_CODES.PASS, [header, body]);
           } else {
-            res.json({
-              message: 'An error ocurred!😞',
-              code: RESPONSE_CODES.ERROR,
-            } as BlockResponse);
+            sendResponse(res, 'An error ocurred!😞', RESPONSE_CODES.ERROR);
           }
         } else {
           if (
             block.hash === '' &&
             block.data.transactions.length >= TRANSACTIONS_PER_BLOCK
           ) {
-            res.json({
-              message:
-                'The last block is already full and has to be mined first!😞',
-              code: RESPONSE_CODES.MINE_BLOCK,
-            } as BlockResponse);
+            sendResponse(res, 'The last block is already full and has to be mined first!😞', RESPONSE_CODES.MINE_BLOCK);
           } else if (block.hash !== '') {
-            res.json({
-              message:
-                'The last block was already mined but no new block was created yet!😞',
-              code: RESPONSE_CODES.NEW_BLOCK,
-            } as BlockResponse);
+            sendResponse(res, 'The last block was already mined but no new block was created yet!😞', RESPONSE_CODES.NEW_BLOCK);
           }
         }
       } else {
-        res.json({
-          message: 'No Jitcoin file found!😠',
-          code: RESPONSE_CODES.NO_BLOCK_ON_DISK,
-        } as BlockResponse);
+        sendResponse(res, 'No Jitcoin file found!😠', RESPONSE_CODES.NO_BLOCK_ON_DISK);
       }
     } else {
-      res.json({
-        message: 'No amount parameter was provided!😞',
-        code: RESPONSE_CODES.NO_AMOUNT_PROVIDED,
-      } as BlockResponse);
+      sendResponse(res, 'No amount parameter was provided!😞', RESPONSE_CODES.NO_AMOUNT_PROVIDED);
     }
   }else{
-    res.json({
-      message: 'No passphrase found. Try to /initWallet first!😞',
-      code: RESPONSE_CODES.NO_PASSPHRASE,
-    } as BlockResponse);
+    sendResponse(res, 'No passphrase found. Try to /initWallet first!😞', RESPONSE_CODES.NO_PASSPHRASE);
   }
 });
 
-app.get('/lastBlock', express.json(), async (req, res) => {
+app.get(LAST_BLOCK, express.json(), async (req, res) => {
   const block = await getLastBlock();
   if (block !== null) {
     const header = getJSONHeaderFromBlock(block);
     const body = getJSONBody(block.data.transactions);
-    res.json({
-      message: 'Here is the last block!👍',
-      code: RESPONSE_CODES.PASS,
-      data: [header, body],
-    } as BlockResponse);
+    sendResponse(res, 'Here is the last block!👍', RESPONSE_CODES.PASS, [header, body]);
   } else {
-    res.json({
-      message: 'No Jitcoin file found!😠',
-      code: RESPONSE_CODES.NO_BLOCK_ON_DISK,
-    } as BlockResponse);
+    sendResponse(res, 'No Jitcoin file found!😠', RESPONSE_CODES.NO_BLOCK_ON_DISK);
   }
 });
 
-app.post('/newBlock', express.json(), async (req, res) => {
+app.post(NEW_BLOCK, express.json(), async (req, res) => {
   const lastBlock = await getLastBlock();
   const body = req.body;
-  const userId = body.userId;
   const amount: number | undefined = body.amount;
   if(passphrase !== undefined){
     if (amount !== undefined) {
@@ -187,46 +146,27 @@ app.post('/newBlock', express.json(), async (req, res) => {
         await block.save();
         const header = getJSONHeaderFromBlock(block);
         const body = getJSONBody(block.data.transactions);
-        res.json({
-          message: 'The new Block was created successfully!👍',
-          code: RESPONSE_CODES.PASS,
-          data: [header, body],
-        } as BlockResponse);
+        sendResponse(res, 'The new Block was created successfully!👍', RESPONSE_CODES.PASS, [header, body]);
       } else {
-        res.json({
-          message: 'The previous block was not mined!😠',
-          code: RESPONSE_CODES.NOT_YET_MINED,
-        } as BlockResponse);
+        sendResponse(res, 'The previous block was not mined!😠', RESPONSE_CODES.NOT_YET_MINED);
       }
     } else {
-      res.json({
-        message: 'No amount parameter was provided!😞',
-        code: RESPONSE_CODES.NO_AMOUNT_PROVIDED,
-      } as BlockResponse);
+      sendResponse(res, 'No amount parameter was provided!😞', RESPONSE_CODES.NO_AMOUNT_PROVIDED);
     }
   }else{
-    res.json({
-      message: 'No passphrase found. Try to /initWallet first!😞',
-      code: RESPONSE_CODES.NO_PASSPHRASE,
-    } as BlockResponse);
+    sendResponse(res, 'No passphrase found. Try to /initWallet first!😞', RESPONSE_CODES.NO_PASSPHRASE);
   }
 });
 
-app.get('/deleteLastBlock', express.json(), async (req, res) => {
+app.get(DELETE_LAST_BLOCK, express.json(), async (req, res) => {
   if (await deleteLastBlock()) {
-    res.json({
-      message: 'The Block was deleted!👍',
-      code: RESPONSE_CODES.PASS,
-    } as BlockResponse);
+    sendResponse(res, 'The Block was deleted!👍', RESPONSE_CODES.PASS);
   } else {
-    res.json({
-      message: 'The Block could not be deleted!😞',
-      code: RESPONSE_CODES.ERROR,
-    } as BlockResponse);
+    sendResponse(res, 'The Block could not be deleted!😞', RESPONSE_CODES.ERROR);
   }
 });
 
-app.post('/length', express.json(), async (req, res) => {
+app.post(LENGTH, express.json(), async (req, res) => {
   const body = req.body;
   const fileNumber = body.file;
   let file = null;
@@ -235,20 +175,13 @@ app.post('/length', express.json(), async (req, res) => {
   }
   const count = await lengthLastBlockFile(file);
   if (count !== null) {
-    res.json({
-      message: 'Length found!👍',
-      code: RESPONSE_CODES.PASS,
-      data: count,
-    } as BlockResponse);
+    sendResponse(res, 'Length found!👍', RESPONSE_CODES.PASS, count);
   } else {
-    res.json({
-      message: 'No length found!😞',
-      code: RESPONSE_CODES.ERROR,
-    } as BlockResponse);
+    sendResponse(res, 'No length found!😞', RESPONSE_CODES.ERROR);
   }
 });
 
-app.post('/fileAsArray', express.json(), async (req, res) => {
+app.post(FILE_AS_ARRAY, express.json(), async (req, res) => {
   const body = req.body;
   const fileNumber = body.file;
   let file = null;
@@ -264,60 +197,45 @@ app.post('/fileAsArray', express.json(), async (req, res) => {
         await getJSONBody(block.data.transactions),
       ]);
     }
-    res.json({
-      message: 'Blocks found!👍',
-      code: RESPONSE_CODES.PASS,
-      data: response,
-    } as BlockResponse);
+    sendResponse(res, 'Blocks found!👍', RESPONSE_CODES.PASS, response);
   } else {
-    res.json({
-      message: 'No Blocks found!😞',
-      code: RESPONSE_CODES.ERROR,
-    } as BlockResponse);
+    sendResponse(res, 'No Blocks found!😞', RESPONSE_CODES.NO_BLOCK_ON_DISK);
   }
 });
 
-app.get('/fileCount', express.json(), async (_req, res) => {
+app.get(FILE_COUNT, express.json(), async (_req, res) => {
   const count = await getFileCount();
   if (count !== -1) {
-    res.json({
-      message: 'File count found!👍',
-      code: RESPONSE_CODES.PASS,
-      data: count,
-    } as BlockResponse);
+    sendResponse(res, 'File count found!👍', RESPONSE_CODES.PASS, count);
   } else {
-    res.json({
-      message: 'JitCoin Path was not found.😞',
-      code: RESPONSE_CODES.PATH_NOT_FOUND,
-      data: count,
-    } as BlockResponse);
+    sendResponse(res, 'JitCoin Path was not found.😞', RESPONSE_CODES.PATH_NOT_FOUND, count);
   }
 });
 
-app.post('/initWallet', express.json(), async (req, res) => {
+app.post(INIT_WALLET, express.json(), async (req, res) => {
   const body = req.body;
   passphrase = body.passphrase;
-  const hash = body.hash;
   await checkWallet(passphrase);
-  const hex = await signTransaction(50, hash, passphrase);
-  res.json({
-    message: 'Passphrase was saved.👍 ' + hex,
-    code: RESPONSE_CODES.PASSPHRASE_SAVED,
-  } as BlockResponse);
+  sendResponse(res, 'Passphrase was saved.👍', RESPONSE_CODES.PASSPHRASE_SAVED);
 });
 
-app.post('/verifySignature', express.json(), async (req, res) => {
+app.post(VERIFY_SIGNATURE, express.json(), async (req, res) => {
   const body = req.body;
   const signature = body.signature;
   const hash = body.hash;
   const amount = body.amount;
   const publicKey = await getPublicKey();
-  res.json({
-    message: verifySigniture(50, hash? hash: getRandomHash(), publicKey, signature).toString(),
-    code: RESPONSE_CODES.PASSPHRASE_SAVED,
-  } as BlockResponse);
+  sendResponse(res, verifySigniture(50, hash? hash: getRandomHash(), publicKey, signature).toString(), RESPONSE_CODES.PASS);
 });
 
 app.listen(PORT, () => {
   console.log(`server is up and running! We are listening on ${PORT}`);
 });
+
+const sendResponse = (res: express.Response, message: string, code: number, data?: object | number | null) => {
+  res.json({
+    message,
+    code,
+    data,
+  } as BlockResponse);
+};

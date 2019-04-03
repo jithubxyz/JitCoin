@@ -39,7 +39,7 @@ export class Block {
     this.hash = hash ? hash : '';
     this.nonce = nonce ? nonce : -1;
     this.merkleTree = data.getMerkleTree();
-    //log(this.data.getData());
+    log(this.data.getData());
   }
 
   /**
@@ -48,7 +48,7 @@ export class Block {
    * @date 2019-01-31
    * @memberof Block
    */
-  mine() {
+  async mine() {
     return new Promise(resolve => {
       const threads = cpus().length;
       console.log(`trying to find nonce... with ${threads} workers...`);
@@ -203,10 +203,11 @@ export class Transaction {
    * @param {number} amount the amount of JitCoins to be betted
    * @memberof Transaction
    */
-  constructor(publicKey: string, randomHash: string, amount: number) {
+  constructor(publicKey: string, randomHash: string, amount: number, signature?: string | undefined) {
     this.publicKey = publicKey;
     this.randomHash = randomHash;
     this.amount = amount;
+    this.signature = signature ? signature: null;
   }
 
   /**
