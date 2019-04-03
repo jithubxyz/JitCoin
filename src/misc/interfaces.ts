@@ -3,6 +3,10 @@
  * @date 2019-02-06
  */
 
+interface ApiResponse {
+  code: number;
+}
+
 export interface BlockHeader {
   version: number;
   previousBlockHash: string;
@@ -29,8 +33,13 @@ export interface MiningChild {
   zeroCount: number;
 }
 
-export interface BlockResponse {
+export interface BlockResponse extends ApiResponse {
   message: string;
-  code: number;
   data: object | null | any;
+}
+
+// P2P Interfaces
+
+export interface StatusResponse extends ApiResponse {
+  lastBlockHash: string;
 }
