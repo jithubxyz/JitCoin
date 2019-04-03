@@ -30,7 +30,6 @@ import {
   getFileAsArray,
   getFileCount,
   checkWallet,
-  signTransaction,
   getPublicKey,
   verifySigniture,
 } from './misc/helper';
@@ -43,6 +42,7 @@ const app = express();
 
 app.get(MINE, express.json(), async (_, res) => {
   const block = await getLastBlock();
+
   if (block !== null) {
     if (
       getBlockHash(block.data.getData(), block.nonce).substring(
@@ -50,10 +50,13 @@ app.get(MINE, express.json(), async (_, res) => {
         DIFFICULTY,
       ) !== getZeroString()
     ) {
+
       if (block.data.transactions.length === TRANSACTIONS_PER_BLOCK) {
         await block.mine();
+
         const header = getJSONHeaderFromBlock(block);
         const body = getJSONBody(block.data.transactions);
+
         sendResponse(res, 'Block was mined successfully!⛏️', RESPONSE_CODES.PASS, [header, body]);
       } else {
         sendResponse(res, 'This Block is not full!😞', RESPONSE_CODES.NOT_FULL);
@@ -69,25 +72,32 @@ app.get(MINE, express.json(), async (_, res) => {
 app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
   const body = req.body;
   const amount: number | undefined = body.amount;
+
   if(passphrase !== undefined){
     if (amount !== undefined) {
+
       const randomHash: string = getRandomHash();
       const block = await getLastBlock();
+
       if (block !== null) {
         if (
           block.hash === '' &&
           block.data.transactions.length < TRANSACTIONS_PER_BLOCK
         ) {
+
           const transaction = new Transaction(
             await getPublicKey(),
             randomHash,
             amount,
           );
           transaction.sign(passphrase);
+
           if (await updateLastBlockData(transaction)) {
-            const block = (await getLastBlock())!!;
+            const block = (await getLastBlock())!;
+
             const header = getJSONHeaderFromBlock(block);
             const body = getJSONBody(block.data.transactions);
+            
             sendResponse(res, 'Transaction was added successfully!😁', RESPONSE_CODES.PASS, [header, body]);
           } else {
             sendResponse(res, 'An error ocurred!😞', RESPONSE_CODES.ERROR);
@@ -115,9 +125,11 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
 
 app.get(LAST_BLOCK, express.json(), async (req, res) => {
   const block = await getLastBlock();
+
   if (block !== null) {
     const header = getJSONHeaderFromBlock(block);
     const body = getJSONBody(block.data.transactions);
+
     sendResponse(res, 'Here is the last block!👍', RESPONSE_CODES.PASS, [header, body]);
   } else {
     sendResponse(res, 'No Jitcoin file found!😠', RESPONSE_CODES.NO_BLOCK_ON_DISK);
@@ -128,12 +140,15 @@ app.post(NEW_BLOCK, express.json(), async (req, res) => {
   const lastBlock = await getLastBlock();
   const body = req.body;
   const amount: number | undefined = body.amount;
+
   if(passphrase !== undefined){
     if (amount !== undefined) {
       let previousHash: string | null = null;
+
       if (lastBlock !== null) {
         previousHash = getBlockHash(lastBlock.data.getData(), lastBlock.nonce);
       }
+
       if (isHashMined(previousHash)) {
         const transaction = new Transaction(
           await getPublicKey(),
@@ -141,11 +156,14 @@ app.post(NEW_BLOCK, express.json(), async (req, res) => {
           amount,
         );
         transaction.sign(passphrase);
+
         const data = new Data(transaction);
         const block = new Block(previousHash, data);
         await block.save();
+
         const header = getJSONHeaderFromBlock(block);
         const body = getJSONBody(block.data.transactions);
+
         sendResponse(res, 'The new Block was created successfully!👍', RESPONSE_CODES.PASS, [header, body]);
       } else {
         sendResponse(res, 'The previous block was not mined!😠', RESPONSE_CODES.NOT_YET_MINED);
@@ -170,10 +188,13 @@ app.post(LENGTH, express.json(), async (req, res) => {
   const body = req.body;
   const fileNumber = body.file;
   let file = null;
+
   if (fileNumber !== null) {
     file = jitcoinFileByNumber(fileNumber);
   }
+
   const count = await lengthLastBlockFile(file);
+
   if (count !== null) {
     sendResponse(res, 'Length found!👍', RESPONSE_CODES.PASS, count);
   } else {
@@ -185,18 +206,23 @@ app.post(FILE_AS_ARRAY, express.json(), async (req, res) => {
   const body = req.body;
   const fileNumber = body.file;
   let file = null;
+
   if (fileNumber !== undefined) {
     file = jitcoinFileByNumber(fileNumber);
   }
+
   const blocks = await getFileAsArray(file);
+
   if (blocks !== null) {
     const response = [];
+
     for (const block of blocks) {
       response.push([
         await getJSONHeaderFromBlock(block),
         await getJSONBody(block.data.transactions),
       ]);
     }
+
     sendResponse(res, 'Blocks found!👍', RESPONSE_CODES.PASS, response);
   } else {
     sendResponse(res, 'No Blocks found!😞', RESPONSE_CODES.NO_BLOCK_ON_DISK);
@@ -205,6 +231,7 @@ app.post(FILE_AS_ARRAY, express.json(), async (req, res) => {
 
 app.get(FILE_COUNT, express.json(), async (_req, res) => {
   const count = await getFileCount();
+
   if (count !== -1) {
     sendResponse(res, 'File count found!👍', RESPONSE_CODES.PASS, count);
   } else {
@@ -215,7 +242,9 @@ app.get(FILE_COUNT, express.json(), async (_req, res) => {
 app.post(INIT_WALLET, express.json(), async (req, res) => {
   const body = req.body;
   passphrase = body.passphrase;
+
   await checkWallet(passphrase);
+
   sendResponse(res, 'Passphrase was saved.👍', RESPONSE_CODES.PASSPHRASE_SAVED);
 });
 
@@ -224,7 +253,9 @@ app.post(VERIFY_SIGNATURE, express.json(), async (req, res) => {
   const signature = body.signature;
   const hash = body.hash;
   const amount = body.amount;
+
   const publicKey = await getPublicKey();
+
   sendResponse(res, verifySigniture(50, hash? hash: getRandomHash(), publicKey, signature).toString(), RESPONSE_CODES.PASS);
 });
 

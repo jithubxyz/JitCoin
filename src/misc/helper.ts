@@ -30,15 +30,11 @@ import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
 import {
   createHash,
   generateKeyPair,
-  createHmac,
   createPrivateKey,
   RSAKeyPairOptions,
-  generateKeyPairSync,
-  privateEncrypt,
   createSign,
   createVerify,
   createPublicKey,
-  createCipheriv,
 } from 'crypto';
 import { deflate, inflate } from 'zlib';
 
@@ -211,15 +207,10 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
     // isolating the header
 
     const headerLengthBuffer = data.slice(delimiterPostion, data.indexOf('x'));
-
     const headerLength = +headerLengthBuffer.toString('utf8');
-
     const headerStart = delimiterPostion + headerLengthBuffer.byteLength;
-
     const headerEnd = headerStart + headerLength;
-
     const header = data.slice(headerStart, headerEnd);
-
     const decompressedHeader = JSON.parse(
       (await decompress(header)).toString('utf8'),
     );
@@ -230,15 +221,10 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
       headerEnd,
       data.indexOf('x', headerEnd),
     );
-
     const bodyLength = +bodyLengthBuffer.toString('utf8');
-
     const bodyStart = headerEnd + bodyLengthBuffer.byteLength;
-
     const bodyEnd = bodyStart + bodyLength;
-
     const body = data.slice(bodyStart, bodyEnd);
-
     const decompressedBody = JSON.parse(
       (await decompress(body)).toString('utf8'),
     );
@@ -254,6 +240,7 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
         transactionItem.amount,
         transactionItem.signature
       );
+
       if (blockData === null) {
         blockData = new Data(transaction);
       } else {
@@ -476,6 +463,7 @@ const jitcoinPathExists = async () => {
  */
 export const getJitCoinFile = async (): Promise<string> => {
   const files = await readDir(BLOCKCHAIN_DIR);
+  
   if (files.length === 0) {
     const file =
       BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(0));
@@ -483,6 +471,7 @@ export const getJitCoinFile = async (): Promise<string> => {
     return file;
   }
   const currentFile = BLOCKCHAIN_DIR + '/' + files[files.length - 1];
+
   if ((await getFilesize(currentFile)) <= MAX_FILE_SIZE) {
     return currentFile;
   } else {
@@ -537,6 +526,7 @@ export const getBlockHash = (data: string, nonce?: number): string => {
 export const getRandomHash = (): string => {
   const currentDate = new Date().valueOf().toString();
   const random = Math.random().toString();
+
   return createHash('sha512')
     .update(currentDate + random)
     .digest('hex');
@@ -577,7 +567,9 @@ export const lengthLastBlockFile = (
     if (file === null) {
       file = await lastJitCoinFile();
     }
+
     const data: Buffer = await read(file);
+
     if (data !== undefined) {
       resolve(data.toString().split(DELIMITER).length - 1);
     } else {
@@ -598,19 +590,24 @@ export const getFileAsArray = (
     if (file === null || file === undefined) {
       file = await lastJitCoinFile();
     }
+
     let data = await read(file);
+
     if (data != null || data !== undefined) {
       const blocks: Block[] = [];
+
       while (data!.toString('utf8') !== '') {
         if (data!.toString('utf8') !== '') {
           const lastBlock = data!.slice(
             data!.lastIndexOf(DELIMITER, undefined, 'utf8'),
             data!.byteLength,
           );
+
           data = data!.slice(
             0,
             data!.lastIndexOf(DELIMITER, undefined, 'utf8'),
           );
+
           blocks.push(await parseFileData(lastBlock));
         }
       }
@@ -631,6 +628,7 @@ export const jitcoinFileByNumber = (nmbr: number): string => {
 
 const lastJitCoinFile = async (): Promise<string> => {
   const files = await readDir(BLOCKCHAIN_DIR);
+
   if (files.length === 0) {
     const file =
       BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(0));
@@ -652,26 +650,15 @@ export const getFileCount = async (): Promise<number> => {
 export const checkWallet = async (passphrase: string) => {
   const publicKeyFile = `${WALLET_DIR}/${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`;
   const privateKeyFile = `${WALLET_DIR}/${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`;
+
   if (!(await jitcoinPathExists())) {
     await createDir();
   }
+
   if (
     !((await fileExists(publicKeyFile)) && (await fileExists(privateKeyFile)))
   ) {
-    /*const keys = await key('rsa', {
-      modulusLength: 4096,
-      publicKeyEncoding: {
-        type: 'spki',
-        format: 'pem',
-      },
-      privateKeyEncoding: {
-        type: 'pkcs8',
-        format: 'pem',
-        cipher: 'aes-256-cbc',
-        passphrase,
-      },
-    });*/
-    const {privateKey, publicKey} = generateKeyPairSync('rsa', {
+    const keys = await key('rsa', {
       modulusLength: 4096,
       publicKeyEncoding: {
         type: 'spki',
@@ -684,9 +671,13 @@ export const checkWallet = async (passphrase: string) => {
         passphrase,
       },
     });
+
     console.log('created new private and public key!');
-    await write(publicKeyFile, publicKey);
-    await write(privateKeyFile, privateKey);
+
+    if(keys !== null){
+      await write(publicKeyFile, keys.publicKey);
+      await write(privateKeyFile, keys.privateKey);
+    }
   }
 };
 
@@ -697,15 +688,19 @@ export const signTransaction = async (
 ) => {
   const publicKeyFile = `${WALLET_DIR}/${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`;
   const privateKeyFile = `${WALLET_DIR}/${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`;
+
   if ((await fileExists(publicKeyFile)) && (await fileExists(privateKeyFile))) {
     const privateKey = await read(privateKeyFile);
     const keyObject = createPrivateKey({
       key: privateKey,
       passphrase,
     });
+
     const publicKey = (await read(publicKeyFile)).toString();
+
     const sign = createSign('RSA-SHA512');
     sign.update(`${amount}${randomHash}${publicKey}`);
+
     return sign.sign(keyObject, 'hex');
   } else {
     return null;
@@ -722,6 +717,7 @@ export const verifySigniture = (amount: number, randomHash: string, publicKey: s
   const keyObject = createPublicKey({
     key: publicKey,
   });
+
   const verify = createVerify('RSA-SHA512');
   verify.update(`${amount}${randomHash}${publicKey}`);
   return verify.verify(keyObject, signature, 'hex');
