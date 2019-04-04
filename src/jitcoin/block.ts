@@ -50,7 +50,6 @@ export class Block {
   async mine() {
     return new Promise(resolve => {
       const threads = cpus().length;
-      console.log(`trying to find nonce... with ${threads} workers...`);
       const workers: ChildProcess[] = [];
       for (let i = 0; i < threads; i++) {
         const thread = fork(join(__dirname, 'mine.js'));
@@ -71,7 +70,6 @@ export class Block {
           await this.save();
           resolve(this.hash);
         });
-        console.log(`added thread nr. ${i}`);
       }
     });
   }

@@ -7,7 +7,7 @@ export const VERSION = 1;
 
 export const TRANSACTIONS_PER_BLOCK = 10;
 
-export const DIFFICULTY = 5;
+export const DIFFICULTY = 2;
 
 export const JITCOIN_DIR = './.jitcoin';
 

@@ -6,6 +6,7 @@ import {
   getLastBlock,
   getRandomHash,
   getPublicKey,
+  checkWallet,
 } from './misc/helper';
 
 let beforeExecution;
@@ -13,6 +14,8 @@ let beforeExecution;
 let elapsedTime;
 
 let blockchain: Blockchain;
+
+let passphrase: string;
 
 (async () => {
   const results: any = await prompt([
@@ -28,7 +31,15 @@ let blockchain: Blockchain;
       message: 'How many zeros are required to mine a hash?',
       default: 4,
     },
+    {
+      type: 'input',
+      name: 'passphrase',
+      message: 'Please enter the passphrase of your private key',
+      default: 'super_secret_password',
+    },
   ]);
+  passphrase = results.passphrase as string;
+  await checkWallet(passphrase);
   // testing the blockchain functionallity: Increasing the amount of starting zeros leads to a massive increase of mining time
   await randomBlockChain(results.iterations as number, results.zeros as number);
 })();
@@ -168,9 +179,11 @@ async function getRandomData(): Promise<Data> {
 }
 
 async function getRandomTransaction(): Promise<Transaction> {
-  return new Transaction(
+  const transaction = new Transaction(
     await getPublicKey(),
     getRandomHash(),
     Math.round(Math.random() * (40 - 1) + 1),
   );
+  transaction.sign(passphrase);
+  return transaction;
 }
