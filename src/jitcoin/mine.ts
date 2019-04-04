@@ -3,18 +3,14 @@ import { getBlockHash, getZeroString, isHashMined } from '../misc/helper';
 import { stdout as log } from 'single-line-log';
 import { DIFFICULTY } from '../misc/constants';
 
-if (process !== undefined && !process.send) {
-  console.log('hi!');
+if (process !== undefined) {
   process.on('message', async (message: MiningChild) => {
-    console.log('before check');
     process.send = process.send!;
-    console.log('after check');
     const steps = message.steps;
     let nonce = message.startingNonce - steps;
     const data = message.data;
     let hash = '';
     const workerNumber = message.startingNonce;
-    console.log(data);
     while (!isHashMined(hash)) {
       // incrementing the nonce | init value is -1
       nonce += steps;

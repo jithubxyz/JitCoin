@@ -39,7 +39,6 @@ export class Block {
     this.hash = hash ? hash : '';
     this.nonce = nonce ? nonce : -1;
     this.merkleTree = data.getMerkleTree();
-    log(this.data.getData());
   }
 
   /**

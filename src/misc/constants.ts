@@ -7,7 +7,7 @@ export const VERSION = 1;
 
 export const TRANSACTIONS_PER_BLOCK = 10;
 
-export const DIFFICULTY = 3;
+export const DIFFICULTY = 5;
 
 export const JITCOIN_DIR = './.jitcoin';
 
@@ -55,6 +55,7 @@ export enum RESPONSE_CODES {
   PATH_NOT_FOUND,
   PASSPHRASE_SAVED,
   NO_PASSPHRASE,
+  INVALID_SIGNATURE
 }
 
 // Endpoints

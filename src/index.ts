@@ -52,12 +52,29 @@ app.get(MINE, express.json(), async (_, res) => {
     ) {
 
       if (block.data.transactions.length === TRANSACTIONS_PER_BLOCK) {
-        await block.mine();
 
-        const header = getJSONHeaderFromBlock(block);
-        const body = getJSONBody(block.data.transactions);
+        // verifying the transactions
+        const transactions = block.data.transactions;
 
-        sendResponse(res, 'Block was mined successfully!⛏️', RESPONSE_CODES.PASS, [header, body]);
+        let valid = -1;
+
+        for(let i = 0; i < transactions.length; i++){
+          if(!transactions[i].verify()){
+            valid = i;
+            break;
+          }
+        }
+        
+        if(valid){
+          await block.mine();
+  
+          const header = getJSONHeaderFromBlock(block);
+          const body = getJSONBody(block.data.transactions);
+  
+          sendResponse(res, 'Block was mined successfully!⛏️', RESPONSE_CODES.PASS, [header, body]);
+        }else{
+          sendResponse(res, `The signature of Block number ${valid} is invalid!😞`, RESPONSE_CODES.INVALID_SIGNATURE);
+        }
       } else {
         sendResponse(res, 'This Block is not full!😞', RESPONSE_CODES.NOT_FULL);
       }
@@ -90,7 +107,7 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
             randomHash,
             amount,
           );
-          transaction.sign(passphrase);
+          await transaction.sign(passphrase);
 
           if (await updateLastBlockData(transaction)) {
             const block = (await getLastBlock())!;
@@ -155,7 +172,7 @@ app.post(NEW_BLOCK, express.json(), async (req, res) => {
           getRandomHash(),
           amount,
         );
-        transaction.sign(passphrase);
+        await transaction.sign(passphrase);
 
         const data = new Data(transaction);
         const block = new Block(previousHash, data);
