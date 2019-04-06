@@ -50,7 +50,7 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
     // just for Bruno
     console.log(
       `Found saved blockchain! Appending to existing block whose hash is ${
-        lastBlock.hash
+      lastBlock.hash
       }`,
     );
     blockchain = new Blockchain(lastBlock);
@@ -70,16 +70,16 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     console.log(
       'mining took ' +
-        elapsedTime / 1000 +
-        ' seconds (' +
-        (elapsedTime / 1000 / 60).toFixed(2) +
-        ' minutes)',
+      elapsedTime / 1000 +
+      ' seconds (' +
+      (elapsedTime / 1000 / 60).toFixed(2) +
+      ' minutes)',
     );
 
     console.log(
       'My hash is: ' +
-        getBlockHash(firstBlock.data.getData(), firstBlock.nonce) +
-        '\nI am the first block!',
+      getBlockHash(firstBlock.data.getData(), firstBlock.nonce) +
+      '\nI am the first block!',
     );
 
     console.log(
@@ -136,10 +136,10 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 
     console.log(
       'mining took ' +
-        elapsedTime / 1000 +
-        ' seconds (' +
-        (elapsedTime / 1000 / 60).toFixed(2) +
-        ' minutes)',
+      elapsedTime / 1000 +
+      ' seconds (' +
+      (elapsedTime / 1000 / 60).toFixed(2) +
+      ' minutes)',
     );
 
     /*console.log(
@@ -156,11 +156,11 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 
     console.log(
       'My hash is: ' +
-        getBlockHash(block.data.getData(), block.nonce) +
-        '\nI am the ' +
-        (i + 2) +
-        '. block! The previous hash was: ' +
-        blockchain.blocks[blockchain.blocks.length - 1].previousBlockHash,
+      getBlockHash(block.data.getData(), block.nonce) +
+      '\nI am the ' +
+      (i + 2) +
+      '. block! The previous hash was: ' +
+      blockchain.blocks[blockchain.blocks.length - 1].previousBlockHash,
     );
 
     console.log(
@@ -172,7 +172,7 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 async function getRandomData(): Promise<Data> {
   const transaction = await getRandomTransaction();
   const data = new Data(transaction);
-  for (let i = 0; i < 6; i++) {
+  for (let i = 0; i < 10; i++) {
     data.addTransaction(await getRandomTransaction());
   }
   return data;

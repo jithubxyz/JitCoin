@@ -204,7 +204,7 @@ export class Transaction {
     this.publicKey = publicKey;
     this.randomHash = randomHash;
     this.amount = amount;
-    this.signature = signature ? signature: null;
+    this.signature = signature ? signature : null;
   }
 
   /**
@@ -232,9 +232,9 @@ export class Transaction {
    * @memberof Transaction
    */
   verify(): boolean {
-    if(this.signature !== null){
+    if (this.signature !== null) {
       return verifySigniture(this.amount, this.randomHash, this.publicKey, this.signature);
-    }else{
+    } else {
       return false;
     }
   }

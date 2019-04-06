@@ -58,21 +58,21 @@ app.get(MINE, express.json(), async (_, res) => {
 
         let valid = -1;
 
-        for(let i = 0; i < transactions.length; i++){
-          if(!transactions[i].verify()){
+        for (let i = 0; i < transactions.length; i++) {
+          if (!transactions[i].verify()) {
             valid = i;
             break;
           }
         }
-        
-        if(valid){
+
+        if (valid) {
           await block.mine();
-  
+
           const header = getJSONHeaderFromBlock(block);
           const body = getJSONBody(block.data.transactions);
-  
+
           sendResponse(res, 'Block was mined successfully!⛏️', RESPONSE_CODES.PASS, [header, body]);
-        }else{
+        } else {
           sendResponse(res, `The signature of Block number ${valid} is invalid!😞`, RESPONSE_CODES.INVALID_SIGNATURE);
         }
       } else {
@@ -90,7 +90,7 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
   const body = req.body;
   const amount: number | undefined = body.amount;
 
-  if(passphrase !== undefined){
+  if (passphrase !== undefined) {
     if (amount !== undefined) {
 
       const randomHash: string = getRandomHash();
@@ -114,7 +114,7 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
 
             const header = getJSONHeaderFromBlock(block);
             const body = getJSONBody(block.data.transactions);
-            
+
             sendResponse(res, 'Transaction was added successfully!😁', RESPONSE_CODES.PASS, [header, body]);
           } else {
             sendResponse(res, 'An error ocurred!😞', RESPONSE_CODES.ERROR);
@@ -135,7 +135,7 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
     } else {
       sendResponse(res, 'No amount parameter was provided!😞', RESPONSE_CODES.NO_AMOUNT_PROVIDED);
     }
-  }else{
+  } else {
     sendResponse(res, 'No passphrase found. Try to /initWallet first!😞', RESPONSE_CODES.NO_PASSPHRASE);
   }
 });
@@ -158,7 +158,7 @@ app.post(NEW_BLOCK, express.json(), async (req, res) => {
   const body = req.body;
   const amount: number | undefined = body.amount;
 
-  if(passphrase !== undefined){
+  if (passphrase !== undefined) {
     if (amount !== undefined) {
       let previousHash: string | null = null;
 
@@ -188,7 +188,7 @@ app.post(NEW_BLOCK, express.json(), async (req, res) => {
     } else {
       sendResponse(res, 'No amount parameter was provided!😞', RESPONSE_CODES.NO_AMOUNT_PROVIDED);
     }
-  }else{
+  } else {
     sendResponse(res, 'No passphrase found. Try to /initWallet first!😞', RESPONSE_CODES.NO_PASSPHRASE);
   }
 });
@@ -273,7 +273,7 @@ app.post(VERIFY_SIGNATURE, express.json(), async (req, res) => {
 
   const publicKey = await getPublicKey();
 
-  sendResponse(res, verifySigniture(50, hash? hash: getRandomHash(), publicKey, signature).toString(), RESPONSE_CODES.PASS);
+  sendResponse(res, verifySigniture(50, hash ? hash : getRandomHash(), publicKey, signature).toString(), RESPONSE_CODES.PASS);
 });
 
 app.listen(PORT, () => {

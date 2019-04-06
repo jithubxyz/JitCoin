@@ -41,9 +41,9 @@ import { deflate, inflate } from 'zlib';
 const write = (file: string, data: string | Buffer): Promise<boolean> =>
   new Promise(resolve => {
     writeFile(file, data, (err) => {
-      if(err){
+      if (err) {
         resolve(false);
-      }else{
+      } else {
         resolve(true);
       }
     });
@@ -108,13 +108,13 @@ const decompress = (buffer: Buffer): Promise<Buffer> => {
     });
   });
 };
-const key = (type: "rsa", options: RSAKeyPairOptions<"pem", "pem">): Promise<{privateKey: string, publicKey: string} | null> =>
+const key = (type: "rsa", options: RSAKeyPairOptions<"pem", "pem">): Promise<{ privateKey: string, publicKey: string } | null> =>
   new Promise(resolve => {
     generateKeyPair(type, options, (err, publicKey, privateKey) => {
-      if(err){
+      if (err) {
         resolve(null);
-      }else{
-        resolve({privateKey, publicKey});
+      } else {
+        resolve({ privateKey, publicKey });
       }
     });
   });
@@ -463,7 +463,7 @@ const jitcoinPathExists = async () => {
  */
 export const getJitCoinFile = async (): Promise<string> => {
   const files = await readDir(BLOCKCHAIN_DIR);
-  
+
   if (files.length === 0) {
     const file =
       BLOCKCHAIN_DIR + '/' + JITCOIN_FILE.replace('$', appendZeros(0));
@@ -674,7 +674,7 @@ export const checkWallet = async (passphrase: string) => {
 
     console.log('created new private and public key!');
 
-    if(keys !== null){
+    if (keys !== null) {
       await write(publicKeyFile, keys.publicKey);
       await write(privateKeyFile, keys.privateKey);
     }
