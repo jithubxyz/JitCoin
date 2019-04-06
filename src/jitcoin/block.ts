@@ -1,5 +1,11 @@
 import { stringify } from 'querystring';
-import { saveBinaryHex, getBlockHash, getZeroString, isHashMined, signTransaction, verifySigniture } from '../misc/helper';
+import {
+  saveBinaryHex,
+  getBlockHash,
+  isHashMined,
+  signTransaction,
+  verifySignature
+} from '../misc/helper';
 import { fork, ChildProcess } from 'child_process';
 import { cpus } from 'os';
 import { stdout as log } from 'single-line-log';
@@ -31,9 +37,8 @@ export class Block {
     previousBlockHash: string | null,
     data: Data,
     nonce?: number | undefined,
-    hash?: string | undefined,
+    hash?: string | undefined
   ) {
-
     this.previousBlockHash = previousBlockHash;
     this.data = data;
     this.hash = hash ? hash : '';
@@ -57,7 +62,7 @@ export class Block {
         thread.send({
           startingNonce: i,
           data: this.data.getData(),
-          steps: threads,
+          steps: threads
         });
         thread.on('message', async ({ nonce, hash }) => {
           for (const worker of workers) {
@@ -98,7 +103,7 @@ export class Block {
       this.previousBlockHash,
       this.merkleTree,
       this.nonce,
-      this.data,
+      this.data
     );
   }
 }
@@ -153,12 +158,15 @@ export class Data {
         for (let i = 0; i < childs.length / 2; i++) {
           newChild.push(getBlockHash(childs[i * 2] + childs[i * 2 + 1]));
         }
-      } else {
-        for (let i = 0; i < Math.floor(childs.length / 2); i++) {
-          newChild.push(getBlockHash(childs[i * 2] + childs[i * 2 + 1]));
-        }
-        newChild.push(getBlockHash(childs[childs.length - 1]));
+        childs = newChild;
+        continue;
       }
+
+      for (let i = 0; i < Math.floor(childs.length / 2); i++) {
+        newChild.push(getBlockHash(childs[i * 2] + childs[i * 2 + 1]));
+      }
+
+      newChild.push(getBlockHash(childs[childs.length - 1]));
       childs = newChild;
     }
     return childs[0];
@@ -200,7 +208,12 @@ export class Transaction {
    * @param {number} amount the amount of JitCoins to be betted
    * @memberof Transaction
    */
-  constructor(publicKey: string, randomHash: string, amount: number, signature?: string | undefined) {
+  constructor(
+    publicKey: string,
+    randomHash: string,
+    amount: number,
+    signature?: string | undefined
+  ) {
     this.publicKey = publicKey;
     this.randomHash = randomHash;
     this.amount = amount;
@@ -223,7 +236,11 @@ export class Transaction {
    * @memberof Transaction
    */
   async sign(passphrase: string) {
-    this.signature = await signTransaction(this.amount, this.randomHash, passphrase);
+    this.signature = await signTransaction(
+      this.amount,
+      this.randomHash,
+      passphrase
+    );
   }
 
   /**
@@ -232,10 +249,13 @@ export class Transaction {
    * @memberof Transaction
    */
   verify(): boolean {
-    if (this.signature !== null) {
-      return verifySigniture(this.amount, this.randomHash, this.publicKey, this.signature);
-    } else {
-      return false;
-    }
+    return this.signature === null
+      ? false
+      : verifySignature(
+          this.amount,
+          this.randomHash,
+          this.publicKey,
+          this.signature
+        );
   }
 }

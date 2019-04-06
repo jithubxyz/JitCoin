@@ -6,7 +6,7 @@ import {
   getLastBlock,
   getRandomHash,
   getPublicKey,
-  checkWallet,
+  checkWallet
 } from './misc/helper';
 
 let beforeExecution;
@@ -23,20 +23,20 @@ let passphrase: string;
       type: 'input',
       name: 'iterations',
       message: 'How many blocks should be in the blockchain?',
-      default: 10,
+      default: 10
     },
     {
       type: 'input',
       name: 'zeros',
       message: 'How many zeros are required to mine a hash?',
-      default: 4,
+      default: 4
     },
     {
       type: 'input',
       name: 'passphrase',
       message: 'Please enter the passphrase of your private key',
-      default: 'super_secret_password',
-    },
+      default: 'super_secret_password'
+    }
   ]);
   passphrase = results.passphrase as string;
   await checkWallet(passphrase);
@@ -50,8 +50,8 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
     // just for Bruno
     console.log(
       `Found saved blockchain! Appending to existing block whose hash is ${
-      lastBlock.hash
-      }`,
+        lastBlock.hash
+      }`
     );
     blockchain = new Blockchain(lastBlock);
     followingBlocks(blockCount, zeroCount);
@@ -70,20 +70,20 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     console.log(
       'mining took ' +
-      elapsedTime / 1000 +
-      ' seconds (' +
-      (elapsedTime / 1000 / 60).toFixed(2) +
-      ' minutes)',
+        elapsedTime / 1000 +
+        ' seconds (' +
+        (elapsedTime / 1000 / 60).toFixed(2) +
+        ' minutes)'
     );
 
     console.log(
       'My hash is: ' +
-      getBlockHash(firstBlock.data.getData(), firstBlock.nonce) +
-      '\nI am the first block!',
+        getBlockHash(firstBlock.data.getData(), firstBlock.nonce) +
+        '\nI am the first block!'
     );
 
     console.log(
-      '____________________________________________________________________________________________________________________________________________',
+      '____________________________________________________________________________________________________________________________________________'
     );
 
     blockchain = new Blockchain(firstBlock);
@@ -123,9 +123,9 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
     const block = new Block(
       getBlockHash(
         blockchain.blocks[blockchain.blocks.length - 1].data.getData(),
-        blockchain.blocks[blockchain.blocks.length - 1].nonce,
+        blockchain.blocks[blockchain.blocks.length - 1].nonce
       ),
-      await getRandomData(),
+      await getRandomData()
     );
 
     await block.mine();
@@ -136,10 +136,10 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 
     console.log(
       'mining took ' +
-      elapsedTime / 1000 +
-      ' seconds (' +
-      (elapsedTime / 1000 / 60).toFixed(2) +
-      ' minutes)',
+        elapsedTime / 1000 +
+        ' seconds (' +
+        (elapsedTime / 1000 / 60).toFixed(2) +
+        ' minutes)'
     );
 
     /*console.log(
@@ -156,15 +156,15 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 
     console.log(
       'My hash is: ' +
-      getBlockHash(block.data.getData(), block.nonce) +
-      '\nI am the ' +
-      (i + 2) +
-      '. block! The previous hash was: ' +
-      blockchain.blocks[blockchain.blocks.length - 1].previousBlockHash,
+        getBlockHash(block.data.getData(), block.nonce) +
+        '\nI am the ' +
+        (i + 2) +
+        '. block! The previous hash was: ' +
+        blockchain.blocks[blockchain.blocks.length - 1].previousBlockHash
     );
 
     console.log(
-      '____________________________________________________________________________________________________________________________________________',
+      '____________________________________________________________________________________________________________________________________________'
     );
   }
 }
@@ -180,9 +180,9 @@ async function getRandomData(): Promise<Data> {
 
 async function getRandomTransaction(): Promise<Transaction> {
   const transaction = new Transaction(
-    await getPublicKey(),
+    (await getPublicKey()).toString(),
     getRandomHash(),
-    Math.round(Math.random() * (40 - 1) + 1),
+    Math.round(Math.random() * (40 - 1) + 1)
   );
   transaction.sign(passphrase);
   return transaction;

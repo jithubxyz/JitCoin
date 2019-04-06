@@ -1,7 +1,6 @@
 import { MiningChild } from '../misc/interfaces';
-import { getBlockHash, getZeroString, isHashMined } from '../misc/helper';
+import { getBlockHash, isHashMined } from '../misc/helper';
 import { stdout as log } from 'single-line-log';
-import { DIFFICULTY } from '../misc/constants';
 
 if (process !== undefined) {
   process.on('message', async (message: MiningChild) => {
