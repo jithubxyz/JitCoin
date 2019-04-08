@@ -17,7 +17,8 @@ export interface BlockBody {
 }
 
 export interface TransactionElement {
-  userId: string;
+  publicKey: string;
+  signature: string;
   randomHash: string;
   amount: number;
 }
@@ -32,5 +33,5 @@ export interface MiningChild {
 export interface BlockResponse {
   message: string;
   code: number;
-  data: object | null | any;
+  data: object | null;
 }

@@ -1,5 +1,11 @@
 import { stringify } from 'querystring';
-import { saveBinaryHex, getBlockHash, getZeroString, isHashMined } from '../misc/helper';
+import {
+  saveBinaryHex,
+  getBlockHash,
+  isHashMined,
+  signTransaction,
+  verifySignature
+} from '../misc/helper';
 import { fork, ChildProcess } from 'child_process';
 import { cpus } from 'os';
 import { stdout as log } from 'single-line-log';
@@ -31,15 +37,13 @@ export class Block {
     previousBlockHash: string | null,
     data: Data,
     nonce?: number | undefined,
-    hash?: string | undefined,
+    hash?: string | undefined
   ) {
-
     this.previousBlockHash = previousBlockHash;
     this.data = data;
     this.hash = hash ? hash : '';
     this.nonce = nonce ? nonce : -1;
     this.merkleTree = data.getMerkleTree();
-    //log(this.data.getData());
   }
 
   /**
@@ -48,10 +52,9 @@ export class Block {
    * @date 2019-01-31
    * @memberof Block
    */
-  mine() {
+  async mine() {
     return new Promise(resolve => {
       const threads = cpus().length;
-      console.log(`trying to find nonce... with ${threads} workers...`);
       const workers: ChildProcess[] = [];
       for (let i = 0; i < threads; i++) {
         const thread = fork(join(__dirname, 'mine.js'));
@@ -59,7 +62,7 @@ export class Block {
         thread.send({
           startingNonce: i,
           data: this.data.getData(),
-          steps: threads,
+          steps: threads
         });
         thread.on('message', async ({ nonce, hash }) => {
           for (const worker of workers) {
@@ -72,7 +75,6 @@ export class Block {
           await this.save();
           resolve(this.hash);
         });
-        console.log(`added thread nr. ${i}`);
       }
     });
   }
@@ -101,7 +103,7 @@ export class Block {
       this.previousBlockHash,
       this.merkleTree,
       this.nonce,
-      this.data,
+      this.data
     );
   }
 }
@@ -156,12 +158,15 @@ export class Data {
         for (let i = 0; i < childs.length / 2; i++) {
           newChild.push(getBlockHash(childs[i * 2] + childs[i * 2 + 1]));
         }
-      } else {
-        for (let i = 0; i < Math.floor(childs.length / 2); i++) {
-          newChild.push(getBlockHash(childs[i * 2] + childs[i * 2 + 1]));
-        }
-        newChild.push(getBlockHash(childs[childs.length - 1]));
+        childs = newChild;
+        continue;
       }
+
+      for (let i = 0; i < Math.floor(childs.length / 2); i++) {
+        newChild.push(getBlockHash(childs[i * 2] + childs[i * 2 + 1]));
+      }
+
+      newChild.push(getBlockHash(childs[childs.length - 1]));
       childs = newChild;
     }
     return childs[0];
@@ -190,22 +195,29 @@ export class Data {
  * @class Transaction
  */
 export class Transaction {
-  userId: string;
+  signature: string | null = null;
+  publicKey: string;
   randomHash: string;
   amount: number;
 
   /**
    * Creates an instance of Transaction.
    * @date 2019-01-31
-   * @param {string} userId the id of the user issuing the transaction
+   * @param {string} publicKey the public key of the issuer
    * @param {string} randomHash the randomly by every user generate user
    * @param {number} amount the amount of JitCoins to be betted
    * @memberof Transaction
    */
-  constructor(userId: string, randomHash: string, amount: number) {
-    this.userId = userId;
+  constructor(
+    publicKey: string,
+    randomHash: string,
+    amount: number,
+    signature?: string | undefined
+  ) {
+    this.publicKey = publicKey;
     this.randomHash = randomHash;
     this.amount = amount;
+    this.signature = signature ? signature : null;
   }
 
   /**
@@ -216,5 +228,34 @@ export class Transaction {
    */
   getData(): string {
     return stringify(this);
+  }
+
+  /**
+   *
+   * @date 2019-01-31
+   * @memberof Transaction
+   */
+  async sign(passphrase: string) {
+    this.signature = await signTransaction(
+      this.amount,
+      this.randomHash,
+      passphrase
+    );
+  }
+
+  /**
+   *
+   * @date 2019-01-31
+   * @memberof Transaction
+   */
+  verify(): boolean {
+    return this.signature === null
+      ? false
+      : verifySignature(
+          this.amount,
+          this.randomHash,
+          this.publicKey,
+          this.signature
+        );
   }
 }

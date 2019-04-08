@@ -7,15 +7,23 @@ export const VERSION = 1;
 
 export const TRANSACTIONS_PER_BLOCK = 10;
 
-export const DIFFICULTY = 1;
+export const DIFFICULTY = 2;
 
 export const JITCOIN_DIR = './.jitcoin';
 
-export const BLOCKCHAIN_DIR = './.jitcoin/blockchain';
+export const BLOCKCHAIN_DIR = `${JITCOIN_DIR}/blockchain`;
+
+export const WALLET_DIR = `${JITCOIN_DIR}/wallet`;
 
 export const JITCOIN_FILE_STARTER = 'blk';
 
 export const JITCOIN_FILE_ENDING = '.jit';
+
+export const WALLET_FILE_STARTER = 'wallet';
+
+export const PUBLIC_KEY_FILE_ENDING = '.pub.jit';
+
+export const PRIVATE_KEY_FILE_ENDING = '.priv.jit';
 
 export const JITCOIN_FILE = `${JITCOIN_FILE_STARTER}$${JITCOIN_FILE_ENDING}`;
 
@@ -45,4 +53,20 @@ export enum RESPONSE_CODES {
   NOT_FULL,
   NOT_YET_MINED,
   PATH_NOT_FOUND,
+  PASSPHRASE_SAVED,
+  NO_PASSPHRASE,
+  INVALID_SIGNATURE
 }
+
+// Endpoints
+
+export const MINE = '/mine';
+export const ADD_TRANSACTION = '/addTransaction';
+export const LAST_BLOCK = '/lastBlock';
+export const NEW_BLOCK = '/newBlock';
+export const DELETE_LAST_BLOCK = '/deleteLastBlock';
+export const LENGTH = '/length';
+export const FILE_AS_ARRAY = '/fileAsArray';
+export const FILE_COUNT = '/fileCount';
+export const INIT_WALLET = '/initWallet';
+export const VERIFY_SIGNATURE = '/verifySignature';

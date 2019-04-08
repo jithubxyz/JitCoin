@@ -1,7 +1,13 @@
 import { Blockchain } from './jitcoin/blockchain';
 import { Block, Data, Transaction } from './jitcoin/block';
 import { prompt } from 'inquirer';
-import { getBlockHash, getLastBlock, getRandomHash } from './misc/helper';
+import {
+  getBlockHash,
+  getLastBlock,
+  getRandomHash,
+  getPublicKey,
+  checkWallet
+} from './misc/helper';
 
 let beforeExecution;
 
@@ -9,21 +15,31 @@ let elapsedTime;
 
 let blockchain: Blockchain;
 
+let passphrase: string;
+
 (async () => {
   const results: any = await prompt([
     {
       type: 'input',
       name: 'iterations',
       message: 'How many blocks should be in the blockchain?',
-      default: 10,
+      default: 10
     },
     {
       type: 'input',
       name: 'zeros',
       message: 'How many zeros are required to mine a hash?',
-      default: 4,
+      default: 4
     },
+    {
+      type: 'input',
+      name: 'passphrase',
+      message: 'Please enter the passphrase of your private key',
+      default: 'super_secret_password'
+    }
   ]);
+  passphrase = results.passphrase as string;
+  await checkWallet(passphrase);
   // testing the blockchain functionallity: Increasing the amount of starting zeros leads to a massive increase of mining time
   await randomBlockChain(results.iterations as number, results.zeros as number);
 })();
@@ -35,14 +51,14 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
     console.log(
       `Found saved blockchain! Appending to existing block whose hash is ${
         lastBlock.hash
-      }`,
+      }`
     );
     blockchain = new Blockchain(lastBlock);
     followingBlocks(blockCount, zeroCount);
   } else {
     beforeExecution = Date.now();
 
-    const data = getRandomData();
+    const data = await getRandomData();
 
     const firstBlock = new Block(null, data);
 
@@ -57,17 +73,17 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
         elapsedTime / 1000 +
         ' seconds (' +
         (elapsedTime / 1000 / 60).toFixed(2) +
-        ' minutes)',
+        ' minutes)'
     );
 
     console.log(
       'My hash is: ' +
         getBlockHash(firstBlock.data.getData(), firstBlock.nonce) +
-        '\nI am the first block!',
+        '\nI am the first block!'
     );
 
     console.log(
-      '____________________________________________________________________________________________________________________________________________',
+      '____________________________________________________________________________________________________________________________________________'
     );
 
     blockchain = new Blockchain(firstBlock);
@@ -107,9 +123,9 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
     const block = new Block(
       getBlockHash(
         blockchain.blocks[blockchain.blocks.length - 1].data.getData(),
-        blockchain.blocks[blockchain.blocks.length - 1].nonce,
+        blockchain.blocks[blockchain.blocks.length - 1].nonce
       ),
-      getRandomData(),
+      await getRandomData()
     );
 
     await block.mine();
@@ -123,7 +139,7 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
         elapsedTime / 1000 +
         ' seconds (' +
         (elapsedTime / 1000 / 60).toFixed(2) +
-        ' minutes)',
+        ' minutes)'
     );
 
     /*console.log(
@@ -144,28 +160,30 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
         '\nI am the ' +
         (i + 2) +
         '. block! The previous hash was: ' +
-        blockchain.blocks[blockchain.blocks.length - 1].previousBlockHash,
+        blockchain.blocks[blockchain.blocks.length - 1].previousBlockHash
     );
 
     console.log(
-      '____________________________________________________________________________________________________________________________________________',
+      '____________________________________________________________________________________________________________________________________________'
     );
   }
 }
 
-function getRandomData(): Data {
-  const transaction = getRandomTransaction();
+async function getRandomData(): Promise<Data> {
+  const transaction = await getRandomTransaction();
   const data = new Data(transaction);
-  for (let i = 0; i < 6; i++) {
-    data.addTransaction(getRandomTransaction());
+  for (let i = 0; i < 10; i++) {
+    data.addTransaction(await getRandomTransaction());
   }
   return data;
 }
 
-function getRandomTransaction(): Transaction {
-  return new Transaction(
+async function getRandomTransaction(): Promise<Transaction> {
+  const transaction = new Transaction(
+    (await getPublicKey()).toString(),
     getRandomHash(),
-    getRandomHash(),
-    Math.round(Math.random() * (40 - 1) + 1),
+    Math.round(Math.random() * (40 - 1) + 1)
   );
+  transaction.sign(passphrase);
+  return transaction;
 }

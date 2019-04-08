@@ -10,11 +10,11 @@
     "@types/express": "^4.16.1",
     "@types/fs-extra": "^5.0.5",
     "@types/inquirer": "0.0.43",
-    "@types/node": "^10.12.19",
+    "@types/node": "^11.12.2",
     "gts": "^0.9.0",
     "inquirer": "^6.2.2",
     "single-line-log": "^1.1.2",
-    "typescript": "~3.1.0"
+    "typescript": "^3.4.1"
   },
   "scripts": {
     "check": "gts check",
@@ -23,7 +23,8 @@
     "fix": "gts fix",
     "prepare": "npm run compile",
     "pretest": "npm run compile",
-    "posttest": "npm run check"
+    "posttest": "npm run check",
+    "dev": "tsc -w"
   },
   "dependencies": {
     "express": "^4.16.4",
