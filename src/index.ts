@@ -31,7 +31,8 @@ import {
   getFileCount,
   checkWallet,
   getPublicKey,
-  verifySignature
+  verifySignature,
+  verifyBlock
 } from './misc/helper';
 import { Transaction, Data, Block } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
@@ -44,26 +45,10 @@ app.get(MINE, express.json(), async (_, res) => {
   const block = await getLastBlock();
 
   if (block !== null) {
-    if (
-      getBlockHash(block.data.getData(), block.nonce).substring(
-        0,
-        DIFFICULTY
-      ) !== getZeroString()
-    ) {
-      if (block.data.transactions.length === TRANSACTIONS_PER_BLOCK) {
-        // verifying the transactions
-        const transactions = block.data.transactions;
-
-        let valid = -1;
-
-        for (let i = 0; i < transactions.length; i++) {
-          if (!transactions[i].verify()) {
-            valid = i;
-            break;
-          }
-        }
-
-        if (valid) {
+    const valid = verifyBlock(block);
+    if (valid[0] === true) {
+      if (valid[1] === true) {
+        if (valid[2] === -1) {
           await block.mine();
 
           const header = getJSONHeaderFromBlock(block);
@@ -78,7 +63,7 @@ app.get(MINE, express.json(), async (_, res) => {
         } else {
           sendResponse(
             res,
-            `The signature of Block number ${valid} is invalid!😞`,
+            `The signature of Block number ${valid[2]} is invalid!😞`,
             RESPONSE_CODES.INVALID_SIGNATURE
           );
         }

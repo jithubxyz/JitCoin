@@ -23,7 +23,8 @@ import {
   WALLET_DIR,
   PUBLIC_KEY_FILE_ENDING,
   PRIVATE_KEY_FILE_ENDING,
-  WALLET_FILE_STARTER
+  WALLET_FILE_STARTER,
+  TRANSACTIONS_PER_BLOCK
 } from './constants';
 import { Transaction, Block, Data } from '../jitcoin/block';
 import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
@@ -668,7 +669,7 @@ export const checkWallet = async (passphrase: string) => {
       modulusLength: 4096,
       publicKeyEncoding: {
         type: 'spki',
-        format: 'pem'
+        format: 'pem',
       },
       privateKeyEncoding: {
         type: 'pkcs8',
@@ -735,10 +736,42 @@ export const verifySignature = (
   signature: string
 ) => {
   const keyObject = createPublicKey({
-    key: publicKey
+    key: `${publicKey}`
   });
 
   const verify = createVerify('RSA-SHA512');
   verify.update(`${amount}${randomHash}${publicKey}`);
   return verify.verify(keyObject, signature, 'hex');
+};
+
+export const verifyBlock = (block: Block): any[] => {
+  const response = [];
+  response.push(block.data.transactions.length === TRANSACTIONS_PER_BLOCK);
+  if (
+    getBlockHash(block.data.getData(), block.nonce).substring(
+      0,
+      DIFFICULTY
+    ) !== getZeroString()
+  ){
+    response.push(true);
+    const transactions = block.data.transactions;  
+    const publicKeys = [];
+    response.push(-1);
+    for (let i = 0; i < transactions.length; i++) {
+      publicKeys.push(transactions[i].publicKey);
+      if (!transactions[i].verify()) {
+        response.pop();
+        response.push(i);
+        return response;
+      }
+    }
+    response.push(hasDuplicates(publicKeys));
+  }else{
+    response.push(false);
+  }
+  return response;
+};
+
+const hasDuplicates = (array: string[]) => {
+  return (new Set(array)).size !== array.length;
 };

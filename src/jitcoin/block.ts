@@ -214,7 +214,7 @@ export class Transaction {
     amount: number,
     signature?: string | undefined
   ) {
-    this.publicKey = publicKey;
+    this.publicKey = getBlockHash(publicKey);
     this.randomHash = randomHash;
     this.amount = amount;
     this.signature = signature ? signature : null;
