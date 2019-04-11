@@ -8,6 +8,7 @@ import {
   getPublicKey,
   checkWallet
 } from './misc/helper';
+import { GAME_TYPES } from './misc/constants';
 
 let beforeExecution;
 
@@ -60,7 +61,7 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     const data = await getRandomData();
 
-    const firstBlock = new Block(null, data);
+    const firstBlock = new Block(null, data, GAME_TYPES.ROULETTE);
 
     await firstBlock.mine();
 
@@ -123,9 +124,10 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
     const block = new Block(
       getBlockHash(
         blockchain.blocks[blockchain.blocks.length - 1].data.getData(),
-        blockchain.blocks[blockchain.blocks.length - 1].nonce
+        blockchain.blocks[blockchain.blocks.length - 1].nonce,
       ),
-      await getRandomData()
+      await getRandomData(),
+      GAME_TYPES.COIN_FLIP
     );
 
     await block.mine();

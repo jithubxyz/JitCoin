@@ -58,6 +58,13 @@ export enum RESPONSE_CODES {
   INVALID_SIGNATURE
 }
 
+//GameTypes
+
+export enum GAME_TYPES{
+  ROULETTE = 1,
+  COIN_FLIP
+}
+
 // Endpoints
 
 export const MINE = '/mine';
