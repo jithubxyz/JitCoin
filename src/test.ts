@@ -6,7 +6,8 @@ import {
   getLastBlock,
   getRandomHash,
   getPublicKey,
-  checkWallet
+  createWallet,
+  checkPassphrase
 } from './misc/helper';
 
 let beforeExecution;
@@ -39,7 +40,7 @@ let passphrase: string;
     }
   ]);
   passphrase = results.passphrase as string;
-  await checkWallet(passphrase);
+  await createWallet(passphrase);
   // testing the blockchain functionallity: Increasing the amount of starting zeros leads to a massive increase of mining time
   await randomBlockChain(results.iterations as number, results.zeros as number);
 })();

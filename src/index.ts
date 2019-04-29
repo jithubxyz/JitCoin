@@ -8,12 +8,13 @@ import {
   ADD_TRANSACTION,
   LAST_BLOCK,
   VERIFY_SIGNATURE,
-  INIT_WALLET,
   FILE_COUNT,
   FILE_AS_ARRAY,
   LENGTH,
   DELETE_LAST_BLOCK,
-  NEW_BLOCK
+  NEW_BLOCK,
+  CREATE_WALLET,
+  UNLOCK_WALLET
 } from './misc/constants';
 import {
   getRandomHash,
@@ -21,7 +22,6 @@ import {
   updateLastBlockData,
   getJSONBody,
   getBlockHash,
-  getZeroString,
   getJSONHeaderFromBlock,
   isHashMined,
   deleteLastBlock,
@@ -29,10 +29,12 @@ import {
   jitcoinFileByNumber,
   getFileAsArray,
   getFileCount,
-  checkWallet,
   getPublicKey,
   verifySignature,
-  verifyBlock
+  verifyBlock,
+  walletExists,
+  createWallet,
+  checkPassphrase
 } from './misc/helper';
 import { Transaction, Data, Block } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
@@ -157,7 +159,7 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
   } else {
     sendResponse(
       res,
-      'No passphrase found. Try to /initWallet first!😞',
+      'No passphrase found. Try to /unlockWallet first!😞',
       RESPONSE_CODES.NO_PASSPHRASE
     );
   }
@@ -234,7 +236,7 @@ app.post(NEW_BLOCK, express.json(), async (req, res) => {
   } else {
     sendResponse(
       res,
-      'No passphrase found. Try to /initWallet first!😞',
+      'No passphrase found. Try to /unlockWallet first!😞',
       RESPONSE_CODES.NO_PASSPHRASE
     );
   }
@@ -312,13 +314,33 @@ app.get(FILE_COUNT, express.json(), async (_req, res) => {
   }
 });
 
-app.post(INIT_WALLET, express.json(), async (req, res) => {
+app.post(CREATE_WALLET, express.json(), async (req, res) => {
   const body = req.body;
-  passphrase = body.passphrase;
 
-  await checkWallet(passphrase);
+  if(!(await walletExists())){
+    if(await createWallet(body.passphrase)){
+      passphrase = body.passphrase;
+      sendResponse(res, 'The Wallet was created successfully!👍', RESPONSE_CODES.PASSPHRASE_SAVED);
+    }else{
+      sendResponse(res, 'There was an error while creating the wallet.😞', RESPONSE_CODES.WALLET_CREATION_ERROR);
+    }
+  }else{
+    sendResponse(res, 'There already is a wallet saved on your disk!😞', RESPONSE_CODES.WALLET_EXISTS);
+  }
+});
 
-  sendResponse(res, 'Passphrase was saved.👍', RESPONSE_CODES.PASSPHRASE_SAVED);
+app.post(UNLOCK_WALLET, express.json(), async (req, res) => {
+  const body = req.body;
+  if(await walletExists()){
+    if(await checkPassphrase(body.passphrase)){
+      passphrase = body.passphrase;
+      sendResponse(res, 'The passphrase was saved successfully!👍', RESPONSE_CODES.PASSPHRASE_SAVED);
+    }else{
+      sendResponse(res, 'The entered passphrase is incorrect!😞', RESPONSE_CODES.WRONG_PASSPHRASE);
+    }
+  }else{
+    sendResponse(res, 'There is no wallet saved on your disk. Call /createWallet first!😞', RESPONSE_CODES.NO_WALLET);
+  }
 });
 
 app.post(VERIFY_SIGNATURE, express.json(), async (req, res) => {

@@ -55,7 +55,11 @@ export enum RESPONSE_CODES {
   PATH_NOT_FOUND,
   PASSPHRASE_SAVED,
   NO_PASSPHRASE,
-  INVALID_SIGNATURE
+  INVALID_SIGNATURE,
+  WALLET_CREATION_ERROR,
+  WALLET_EXISTS,
+  WRONG_PASSPHRASE,
+  NO_WALLET
 }
 
 // Endpoints
@@ -68,5 +72,6 @@ export const DELETE_LAST_BLOCK = '/deleteLastBlock';
 export const LENGTH = '/length';
 export const FILE_AS_ARRAY = '/fileAsArray';
 export const FILE_COUNT = '/fileCount';
-export const INIT_WALLET = '/initWallet';
+export const CREATE_WALLET = '/createWallet';
+export const UNLOCK_WALLET = '/unlockWallet';
 export const VERIFY_SIGNATURE = '/verifySignature';
