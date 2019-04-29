@@ -8,12 +8,13 @@ import {
   ADD_TRANSACTION,
   LAST_BLOCK,
   VERIFY_SIGNATURE,
-  INIT_WALLET,
   FILE_COUNT,
   FILE_AS_ARRAY,
   LENGTH,
   DELETE_LAST_BLOCK,
-  NEW_BLOCK
+  NEW_BLOCK,
+  CREATE_WALLET,
+  UNLOCK_WALLET
 } from './misc/constants';
 import {
   getRandomHash,
@@ -157,7 +158,7 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
   } else {
     sendResponse(
       res,
-      'No passphrase found. Try to /initWallet first!😞',
+      'No passphrase found. Try to /unlockWallet first!😞',
       RESPONSE_CODES.NO_PASSPHRASE
     );
   }
@@ -234,7 +235,7 @@ app.post(NEW_BLOCK, express.json(), async (req, res) => {
   } else {
     sendResponse(
       res,
-      'No passphrase found. Try to /initWallet first!😞',
+      'No passphrase found. Try to /unlockWallet first!😞',
       RESPONSE_CODES.NO_PASSPHRASE
     );
   }
@@ -312,7 +313,7 @@ app.get(FILE_COUNT, express.json(), async (_req, res) => {
   }
 });
 
-app.post(INIT_WALLET, express.json(), async (req, res) => {
+app.post(CREATE_WALLET, express.json(), async (req, res) => {
   const body = req.body;
   passphrase = body.passphrase;
 

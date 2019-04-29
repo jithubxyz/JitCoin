@@ -68,5 +68,6 @@ export const DELETE_LAST_BLOCK = '/deleteLastBlock';
 export const LENGTH = '/length';
 export const FILE_AS_ARRAY = '/fileAsArray';
 export const FILE_COUNT = '/fileCount';
-export const INIT_WALLET = '/initWallet';
+export const CREATE_WALLET = '/createWallet';
+export const UNLOCK_WALLET = '/unlockWallet';
 export const VERIFY_SIGNATURE = '/verifySignature';

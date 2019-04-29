@@ -647,6 +647,28 @@ export const getFileCount = async (): Promise<number> => {
   return files.length;
 };
 
+export const createWallet = async (passphrase: string): Boolean => {
+  const publicKeyFile = pathResolve(
+    WALLET_DIR,
+    `${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`
+  );
+  const privateKeyFile = pathResolve(
+    WALLET_DIR,
+    `${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`
+  );
+
+  if (!(await jitcoinPathExists())) {
+    await createDir();
+  }
+
+};
+
+const walletExists = async (publicKeyFile: string, privateKeyFile: string) => {
+  const publicKeyExists = await fileExists(publicKeyFile);
+  const privateKeyExists = await fileExists(privateKeyFile);
+  return publicKeyExists || privateKeyExists;
+};
+
 export const checkWallet = async (passphrase: string) => {
   const publicKeyFile = pathResolve(
     WALLET_DIR,
@@ -744,7 +766,7 @@ export const verifySignature = (
   return verify.verify(keyObject, signature, 'hex');
 };
 
-export const verifyBlock = (block: Block): any[] => {
+export const verifyBlock = (block: Block): Array<number | boolean> => {
   const response = [];
   response.push(block.data.transactions.length === TRANSACTIONS_PER_BLOCK);
   if (
