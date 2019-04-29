@@ -2,6 +2,8 @@ import { Blockchain } from './jitcoin/blockchain';
 import { Block, Data, Transaction } from './jitcoin/block';
 import { prompt } from 'inquirer';
 import { getBlockHash, getLastBlock, getRandomHash } from './misc/helper';
+import { getClients, fetchTrackers } from './p2p/tracker';
+import { registerAsClient, sendHeartbeat } from './p2p/client';
 
 let beforeExecution;
 
@@ -10,6 +12,14 @@ let elapsedTime;
 let blockchain: Blockchain;
 
 (async () => {
+  const trackers = await fetchTrackers(`http://10.16.106.8:4000`);
+  console.log(trackers);
+  if (trackers.length > 0) {
+    const reg = await registerAsClient(trackers[0].tracker);
+    setInterval(() => sendHeartbeat(trackers[0].tracker, reg), 5000);
+    const c = await getClients(`http://10.16.106.8:4000`);
+  }
+  
   const results: any = await prompt([
     {
       type: 'input',

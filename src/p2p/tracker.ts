@@ -7,6 +7,7 @@ export interface Tracker {
 }
 
 export interface Client {
+    id: string;
     walletId: string;
     lastHeartbeat: number;
 }
@@ -45,11 +46,14 @@ async function getTrackerClients(tracker: Tracker): Promise<Client[]> {
 export async function getClients(rootTrackerUrl: string) {
     const trackers = await fetchTrackers(rootTrackerUrl);
     const clients = (await Promise.all(trackers.map(t => getTrackerClients(t.tracker)))).flat();
-
+    return clients;
 }
 
-async function fetchTrackers(rootTrackerUrl: string) {
-    const trackers = await getTrackers(rootTrackerUrl);
+export async function fetchTrackers(rootTrackerUrl: string) {
+    const trackers = (await getTrackers(rootTrackerUrl)).map((t) => {
+        t.address = `http://10.16.106.8:6000`; // for testing purposes
+        return t;
+    });
     const latencies = await checkLatencies(trackers);
     return latencies.sort(sortLatency);
 }
