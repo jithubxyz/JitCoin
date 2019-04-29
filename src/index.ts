@@ -202,6 +202,7 @@ app.post(NEW_BLOCK, express.json(), async (req, res) => {
   const lastBlock = await getLastBlock();
   const body = req.body;
   const amount: number | undefined = body.amount;
+  const gameType: number = body.gameType;
 
   if (passphrase !== undefined) {
     if (amount !== undefined) {
@@ -220,7 +221,7 @@ app.post(NEW_BLOCK, express.json(), async (req, res) => {
         await transaction.sign(passphrase);
 
         const data = new Data(transaction);
-        const block = new Block(previousHash, data);
+        const block = new Block(previousHash, data, gameType);
         await block.save();
 
         const header = getJSONHeaderFromBlock(block);
