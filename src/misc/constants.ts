@@ -61,7 +61,7 @@ export enum RESPONSE_CODES {
 //GameTypes
 
 export enum GAME_TYPES{
-  ROULETTE = 1,
+  ROULETTE,
   COIN_FLIP
 }
 
