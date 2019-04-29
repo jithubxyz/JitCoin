@@ -35,7 +35,8 @@ import {
   RSAKeyPairOptions,
   createSign,
   createVerify,
-  createPublicKey
+  createPublicKey,
+  privateDecrypt
 } from 'crypto';
 import { deflate, inflate } from 'zlib';
 import { resolve as pathResolve } from 'path';
@@ -647,7 +648,7 @@ export const getFileCount = async (): Promise<number> => {
   return files.length;
 };
 
-export const createWallet = async (passphrase: string): Boolean => {
+export const createWallet = async (passphrase: string): Promise<boolean> => {
   const publicKeyFile = pathResolve(
     WALLET_DIR,
     `${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`
@@ -661,53 +662,66 @@ export const createWallet = async (passphrase: string): Boolean => {
     await createDir();
   }
 
+  const keys = await key('rsa', {
+    modulusLength: 4096,
+    publicKeyEncoding: {
+      type: 'spki',
+      format: 'pem',
+    },
+    privateKeyEncoding: {
+      type: 'pkcs8',
+      format: 'pem',
+      cipher: 'aes-256-cbc',
+      passphrase
+    }
+  });
+
+  console.log('created new private and public key!');
+
+  if (keys !== null) {
+    await write(publicKeyFile, keys.publicKey);
+    await write(privateKeyFile, keys.privateKey);
+    return true;
+  }else{
+    return false;
+  }
 };
 
-const walletExists = async (publicKeyFile: string, privateKeyFile: string) => {
+export const walletExists = async (): Promise<boolean> => {
+  const publicKeyFile = pathResolve(
+    WALLET_DIR,
+    `${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`
+  );
+  const privateKeyFile = pathResolve(
+    WALLET_DIR,
+    `${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`
+  );
   const publicKeyExists = await fileExists(publicKeyFile);
   const privateKeyExists = await fileExists(privateKeyFile);
   return publicKeyExists || privateKeyExists;
 };
 
-export const checkWallet = async (passphrase: string) => {
-  const publicKeyFile = pathResolve(
-    WALLET_DIR,
-    `${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`
-  );
+export const checkPassphrase = async (passphrase: string): Promise<boolean> => {
   const privateKeyFile = pathResolve(
     WALLET_DIR,
     `${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`
   );
-
-  if (!(await jitcoinPathExists())) {
-    await createDir();
-  }
-
-  const publicKeyExists = await fileExists(publicKeyFile);
-  const privateKeyExists = await fileExists(privateKeyFile);
-
-  if (!publicKeyExists || !privateKeyExists) {
-    const keys = await key('rsa', {
-      modulusLength: 4096,
-      publicKeyEncoding: {
-        type: 'spki',
-        format: 'pem',
-      },
-      privateKeyEncoding: {
-        type: 'pkcs8',
-        format: 'pem',
-        cipher: 'aes-256-cbc',
-        passphrase
-      }
+  const privateKey = await read(privateKeyFile);
+  try {
+    createPrivateKey({
+      key: privateKey,
+      passphrase
     });
-
-    console.log('created new private and public key!');
-
-    if (keys !== null) {
-      await write(publicKeyFile, keys.publicKey);
-      await write(privateKeyFile, keys.privateKey);
+    return true;
+  } catch (error) {
+    if(error instanceof Error){
+      if(error.message.includes('EVP_DecryptFinal_ex')){
+        return false;
+      }
+      throw error;
     }
   }
+  return false;
 };
 
 export const signTransaction = async (
