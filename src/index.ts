@@ -34,7 +34,8 @@ import {
   verifyBlock,
   walletExists,
   createWallet,
-  checkPassphrase
+  checkPassphrase,
+  verifyReward
 } from './misc/helper';
 import { Transaction, Data, Block } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
@@ -51,17 +52,26 @@ app.get(MINE, express.json(), async (_, res) => {
     if (valid[0] === true) {
       if (valid[1] === true) {
         if (valid[2] === -1) {
-          await block.mine();
+          const reward = verifyReward(block);
+          if (reward.length === 2) {
+            await block.mine();
 
-          const header = getJSONHeaderFromBlock(block);
-          const body = getJSONBody(block.data.transactions);
+            const header = getJSONHeaderFromBlock(block);
+            const body = getJSONBody(block.data.transactions);
 
-          sendResponse(
-            res,
-            'Block was mined successfully!⛏️',
-            RESPONSE_CODES.PASS,
-            [header, body]
-          );
+            sendResponse(
+              res,
+              `Block was mined successfully! You gained a reward of ${reward[1]} JitCoins!⛏️`,
+              RESPONSE_CODES.PASS,
+              [header, body]
+            );
+          } else {
+            sendResponse(
+              res,
+              `The input/output values are wrong in the following block: ${reward}!😞`,
+              RESPONSE_CODES.INVALID_SIGNATURE
+            );
+          }
         } else {
           sendResponse(
             res,
@@ -90,10 +100,11 @@ app.get(MINE, express.json(), async (_, res) => {
 
 app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
   const body = req.body;
-  const amount: number | undefined = body.amount;
+  const inputAmount: number | undefined = body.inputAmount;
+  const outputAmount: number | undefined = body.outputAmount;
 
   if (passphrase !== undefined) {
-    if (amount !== undefined) {
+    if (inputAmount !== undefined && outputAmount !== undefined) {
       const randomHash: string = getRandomHash();
       const block = await getLastBlock();
 
@@ -105,7 +116,8 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
           const transaction = new Transaction(
             (await getPublicKey()).toString(),
             randomHash,
-            amount
+            inputAmount,
+            outputAmount,
           );
           await transaction.sign(passphrase);
 
@@ -152,7 +164,7 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
     } else {
       sendResponse(
         res,
-        'No amount parameter was provided!😞',
+        'No inputAmount or outputAmount parameter was provided!😞',
         RESPONSE_CODES.NO_AMOUNT_PROVIDED
       );
     }
@@ -188,10 +200,11 @@ app.get(LAST_BLOCK, express.json(), async (req, res) => {
 app.post(NEW_BLOCK, express.json(), async (req, res) => {
   const lastBlock = await getLastBlock();
   const body = req.body;
-  const amount: number | undefined = body.amount;
+  const inputAmount: number | undefined = body.inputAmount;
+  const outputAmount: number | undefined = body.outputAmount;
 
   if (passphrase !== undefined) {
-    if (amount !== undefined) {
+    if (inputAmount !== undefined && outputAmount !== undefined) {
       let previousHash: string | null = null;
 
       if (lastBlock !== null) {
@@ -202,7 +215,8 @@ app.post(NEW_BLOCK, express.json(), async (req, res) => {
         const transaction = new Transaction(
           (await getPublicKey()).toString(),
           getRandomHash(),
-          amount
+          inputAmount,
+          outputAmount,
         );
         await transaction.sign(passphrase);
 
@@ -229,7 +243,7 @@ app.post(NEW_BLOCK, express.json(), async (req, res) => {
     } else {
       sendResponse(
         res,
-        'No amount parameter was provided!😞',
+        'No inputAmount or outputAmount parameter was provided!😞',
         RESPONSE_CODES.NO_AMOUNT_PROVIDED
       );
     }
@@ -317,33 +331,33 @@ app.get(FILE_COUNT, express.json(), async (_req, res) => {
 app.post(CREATE_WALLET, express.json(), async (req, res) => {
   const body = req.body;
 
-  if(!(await walletExists())){
-    if(await createWallet(body.passphrase)){
+  if (!(await walletExists())) {
+    if (await createWallet(body.passphrase)) {
       passphrase = body.passphrase;
       sendResponse(res, 'The Wallet was created successfully!👍', RESPONSE_CODES.PASSPHRASE_SAVED);
-    }else{
+    } else {
       sendResponse(res, 'There was an error while creating the wallet.😞', RESPONSE_CODES.WALLET_CREATION_ERROR);
     }
-  }else{
+  } else {
     sendResponse(res, 'There already is a wallet saved on your disk!😞', RESPONSE_CODES.WALLET_EXISTS);
   }
 });
 
 app.post(UNLOCK_WALLET, express.json(), async (req, res) => {
   const body = req.body;
-  if(await walletExists()){
-    if(await checkPassphrase(body.passphrase)){
+  if (await walletExists()) {
+    if (await checkPassphrase(body.passphrase)) {
       passphrase = body.passphrase;
       sendResponse(res, 'The passphrase was saved successfully!👍', RESPONSE_CODES.PASSPHRASE_SAVED);
-    }else{
+    } else {
       sendResponse(res, 'The entered passphrase is incorrect!😞', RESPONSE_CODES.WRONG_PASSPHRASE);
     }
-  }else{
+  } else {
     sendResponse(res, 'There is no wallet saved on your disk. Call /createWallet first!😞', RESPONSE_CODES.NO_WALLET);
   }
 });
 
-app.post(VERIFY_SIGNATURE, express.json(), async (req, res) => {
+/*app.post(VERIFY_SIGNATURE, express.json(), async (req, res) => {
   const body = req.body;
   const signature = body.signature;
   const hash = body.hash;
@@ -361,7 +375,7 @@ app.post(VERIFY_SIGNATURE, express.json(), async (req, res) => {
     ).toString(),
     RESPONSE_CODES.PASS
   );
-});
+});*/
 
 app.listen(PORT, () => {
   console.log(`server is up and running! We are listening on ${PORT}`);

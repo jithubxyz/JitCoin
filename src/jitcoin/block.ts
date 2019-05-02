@@ -198,7 +198,8 @@ export class Transaction {
   signature: string | null = null;
   publicKey: string;
   randomHash: string;
-  amount: number;
+  inputAmount: number;
+  outputAmount: number;
 
   /**
    * Creates an instance of Transaction.
@@ -211,12 +212,14 @@ export class Transaction {
   constructor(
     publicKey: string,
     randomHash: string,
-    amount: number,
+    inputAmount: number,
+    outputAmount: number,
     signature?: string | undefined
   ) {
     this.publicKey = getBlockHash(publicKey);
     this.randomHash = randomHash;
-    this.amount = amount;
+    this.inputAmount = inputAmount;
+    this.outputAmount = outputAmount;
     this.signature = signature ? signature : null;
   }
 
@@ -237,7 +240,8 @@ export class Transaction {
    */
   async sign(passphrase: string) {
     this.signature = await signTransaction(
-      this.amount,
+      this.inputAmount,
+      this.outputAmount,
       this.randomHash,
       passphrase
     );
@@ -252,7 +256,8 @@ export class Transaction {
     return this.signature === null
       ? false
       : verifySignature(
-          this.amount,
+          this.inputAmount,
+          this.outputAmount,
           this.randomHash,
           this.publicKey,
           this.signature

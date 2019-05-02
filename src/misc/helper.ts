@@ -24,7 +24,8 @@ import {
   PUBLIC_KEY_FILE_ENDING,
   PRIVATE_KEY_FILE_ENDING,
   WALLET_FILE_STARTER,
-  TRANSACTIONS_PER_BLOCK
+  TRANSACTIONS_PER_BLOCK,
+  MINIMUM_REWARD_PERCENTAGE
 } from './constants';
 import { Transaction, Block, Data } from '../jitcoin/block';
 import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
@@ -35,8 +36,7 @@ import {
   RSAKeyPairOptions,
   createSign,
   createVerify,
-  createPublicKey,
-  privateDecrypt
+  createPublicKey
 } from 'crypto';
 import { deflate, inflate } from 'zlib';
 import { resolve as pathResolve } from 'path';
@@ -109,11 +109,12 @@ const decompress = (buffer: Buffer): Promise<Buffer> => {
     });
   });
 };
+
 const key = (
   type: 'rsa',
   options: RSAKeyPairOptions<'pem', 'pem'>
-): Promise<{ privateKey: string; publicKey: string } | null> =>
-  new Promise((resolve, reject) => {
+): Promise<{ privateKey: string; publicKey: string } | null> => {
+  return new Promise((resolve, reject) => {
     generateKeyPair(type, options, (err, publicKey, privateKey) => {
       if (err) {
         return reject(err);
@@ -121,6 +122,7 @@ const key = (
       resolve({ privateKey, publicKey });
     });
   });
+}
 
 /**
  *
@@ -239,7 +241,8 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
       const transaction = new Transaction(
         transactionItem.publicKey,
         transactionItem.randomHash,
-        transactionItem.amount,
+        transactionItem.inputAmount,
+        transactionItem.outputAmount,
         transactionItem.signature
       );
 
@@ -419,7 +422,8 @@ export const getJSONBody = (transactions: Transaction[]): BlockBody => {
 
   for (const transaction of transactions) {
     trans.push({
-      amount: transaction.amount,
+      inputAmount: transaction.inputAmount,
+      outputAmount: transaction.outputAmount,
       randomHash: transaction.randomHash,
       signature: transaction.signature,
       publicKey: transaction.publicKey
@@ -682,7 +686,7 @@ export const createWallet = async (passphrase: string): Promise<boolean> => {
     await write(publicKeyFile, keys.publicKey);
     await write(privateKeyFile, keys.privateKey);
     return true;
-  }else{
+  } else {
     return false;
   }
 };
@@ -714,8 +718,8 @@ export const checkPassphrase = async (passphrase: string): Promise<boolean> => {
     });
     return true;
   } catch (error) {
-    if(error instanceof Error){
-      if(error.message.includes('EVP_DecryptFinal_ex')){
+    if (error instanceof Error) {
+      if (error.message.includes('EVP_DecryptFinal_ex')) {
         return false;
       }
       throw error;
@@ -725,7 +729,8 @@ export const checkPassphrase = async (passphrase: string): Promise<boolean> => {
 };
 
 export const signTransaction = async (
-  amount: number,
+  inputAmount: number,
+  outputAmount: number,
   randomHash: string,
   passphrase: string
 ) => {
@@ -754,7 +759,7 @@ export const signTransaction = async (
   const publicKey = (await read(publicKeyFile)).toString();
 
   const sign = createSign('RSA-SHA512');
-  sign.update(`${amount}${randomHash}${publicKey}`);
+  sign.update(`${inputAmount}${outputAmount}${randomHash}${publicKey}`);
 
   return sign.sign(keyObject, 'hex');
 };
@@ -766,7 +771,8 @@ export const getPublicKey = async () => {
 };
 
 export const verifySignature = (
-  amount: number,
+  inputAmount: number,
+  outputAmount: number,
   randomHash: string,
   publicKey: string,
   signature: string
@@ -776,7 +782,7 @@ export const verifySignature = (
   });
 
   const verify = createVerify('RSA-SHA512');
-  verify.update(`${amount}${randomHash}${publicKey}`);
+  verify.update(`${inputAmount}${outputAmount}${randomHash}${publicKey}`);
   return verify.verify(keyObject, signature, 'hex');
 };
 
@@ -788,9 +794,9 @@ export const verifyBlock = (block: Block): Array<number | boolean> => {
       0,
       DIFFICULTY
     ) !== getZeroString()
-  ){
+  ) {
     response.push(true);
-    const transactions = block.data.transactions;  
+    const transactions = block.data.transactions;
     const publicKeys = [];
     response.push(-1);
     for (let i = 0; i < transactions.length; i++) {
@@ -802,9 +808,33 @@ export const verifyBlock = (block: Block): Array<number | boolean> => {
       }
     }
     response.push(hasDuplicates(publicKeys));
-  }else{
+  } else {
     response.push(false);
   }
+  return response;
+};
+
+export const verifyReward = (block: Block): Array<number> => {
+  const response = [];
+  let reward = 0;
+  const transactions = block.data.transactions;
+  for (let i = 0; i < transactions.length; i++) {
+    const transaction = transactions[i];
+    if (transaction.inputAmount - transaction.outputAmount < 0) {
+      response.push(0);
+      response.push(i);
+    } else if (transaction.outputAmount > transaction.inputAmount) {
+      response.push(-1);
+      response.push(i);
+    } else if ((transaction.inputAmount - transaction.outputAmount) <= transaction.inputAmount * MINIMUM_REWARD_PERCENTAGE) {
+      response.push(-2);
+      response.push(i)
+    } else {
+      reward += transaction.inputAmount - transaction.outputAmount;
+    }
+  }
+  response.push(-3);
+  response.push(reward);
   return response;
 };
 

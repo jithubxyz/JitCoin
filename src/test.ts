@@ -9,6 +9,7 @@ import {
   createWallet,
   checkPassphrase
 } from './misc/helper';
+import { MINIMUM_REWARD_PERCENTAGE } from './misc/constants';
 
 let beforeExecution;
 
@@ -51,7 +52,7 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
     // just for Bruno
     console.log(
       `Found saved blockchain! Appending to existing block whose hash is ${
-        lastBlock.hash
+      lastBlock.hash
       }`
     );
     blockchain = new Blockchain(lastBlock);
@@ -71,16 +72,16 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     console.log(
       'mining took ' +
-        elapsedTime / 1000 +
-        ' seconds (' +
-        (elapsedTime / 1000 / 60).toFixed(2) +
-        ' minutes)'
+      elapsedTime / 1000 +
+      ' seconds (' +
+      (elapsedTime / 1000 / 60).toFixed(2) +
+      ' minutes)'
     );
 
     console.log(
       'My hash is: ' +
-        getBlockHash(firstBlock.data.getData(), firstBlock.nonce) +
-        '\nI am the first block!'
+      getBlockHash(firstBlock.data.getData(), firstBlock.nonce) +
+      '\nI am the first block!'
     );
 
     console.log(
@@ -137,10 +138,10 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 
     console.log(
       'mining took ' +
-        elapsedTime / 1000 +
-        ' seconds (' +
-        (elapsedTime / 1000 / 60).toFixed(2) +
-        ' minutes)'
+      elapsedTime / 1000 +
+      ' seconds (' +
+      (elapsedTime / 1000 / 60).toFixed(2) +
+      ' minutes)'
     );
 
     /*console.log(
@@ -157,11 +158,11 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 
     console.log(
       'My hash is: ' +
-        getBlockHash(block.data.getData(), block.nonce) +
-        '\nI am the ' +
-        (i + 2) +
-        '. block! The previous hash was: ' +
-        blockchain.blocks[blockchain.blocks.length - 1].previousBlockHash
+      getBlockHash(block.data.getData(), block.nonce) +
+      '\nI am the ' +
+      (i + 2) +
+      '. block! The previous hash was: ' +
+      blockchain.blocks[blockchain.blocks.length - 1].previousBlockHash
     );
 
     console.log(
@@ -180,10 +181,12 @@ async function getRandomData(): Promise<Data> {
 }
 
 async function getRandomTransaction(): Promise<Transaction> {
+  const amount = Math.round(Math.random() * (40 - 1) + 1);
   const transaction = new Transaction(
     (await getPublicKey()).toString(),
     getRandomHash(),
-    Math.round(Math.random() * (40 - 1) + 1)
+    amount,
+    amount - (amount * MINIMUM_REWARD_PERCENTAGE)
   );
   transaction.sign(passphrase);
   return transaction;
