@@ -204,6 +204,34 @@ export const getLastBlock = (): Promise<Block | null> => {
   });
 };
 
+/**
+ * 
+ * @author Eleftherios Pavlidis
+ * @param hash 
+ * @returns {Promise<Block | null>}
+ */
+export const getBlockByHash = async (hash: string): Promise<Block | null> => {
+  if (!(await jitcoinPathExists())) {
+    return null;
+  }
+  const count = await getFileCount();
+
+  for(let i = count; i >= 0; i--){
+    const file = jitcoinFileByNumber(i);
+
+    const blocks = await getFileAsArray(file);
+
+    if(blocks !== null){
+      for(const block of blocks){
+        if(block.hash === hash){
+          return block;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 export const parseFileData = (data: Buffer): Promise<Block> => {
   return new Promise(async resolve => {
     const delimiterPostion = Buffer.from(DELIMITER).byteLength;
@@ -814,7 +842,7 @@ export const verifyBlock = (block: Block): Array<number | boolean> => {
   return response;
 };
 
-export const verifyReward = (block: Block): number[] => {
+export const verifyReward = (block: Block): Array<number> => {
   const response = [];
   let reward = 0;
   const transactions = block.data.transactions;
@@ -828,7 +856,7 @@ export const verifyReward = (block: Block): number[] => {
       response.push(i);
     } else if ((transaction.inputAmount - transaction.outputAmount) <= transaction.inputAmount * MINIMUM_REWARD_PERCENTAGE) {
       response.push(-2);
-      response.push(i);
+      response.push(i)
     } else {
       reward += transaction.inputAmount - transaction.outputAmount;
     }
@@ -841,21 +869,3 @@ export const verifyReward = (block: Block): number[] => {
 const hasDuplicates = (array: string[]) => {
   return (new Set(array)).size !== array.length;
 };
-
-/*const getCurrentBalance = async (): Promise<number> => {
-  const balance = 0;
-  let count = await getFileCount();
-  while(count !== 0){
-    const file = JITCOIN_FILE_STARTER + appendZeros(count) + JITCOIN_FILE_ENDING;
-    const blockArray = await getFileAsArray(file);
-    if(blockArray !== null){
-      for(let i = 0; i < blockArray.length; i++){
-        const block = blockArray[i];
-        if(block.data.transactions.){
-
-        }
-      }
-    }
-    count--;
-  }
-}*/
