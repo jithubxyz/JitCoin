@@ -3,17 +3,16 @@ import {
   PORT,
   TRANSACTIONS_PER_BLOCK,
   RESPONSE_CODES,
-  DIFFICULTY,
+  PLACE_BET,
   MINE,
-  ADD_TRANSACTION,
   LAST_BLOCK,
-  VERIFY_SIGNATURE,
-  INIT_WALLET,
   FILE_COUNT,
   FILE_AS_ARRAY,
   LENGTH,
   DELETE_LAST_BLOCK,
-  NEW_BLOCK
+  CREATE_WALLET,
+  UNLOCK_WALLET,
+  GET_BLOCK_BY_HASH
 } from './misc/constants';
 import {
   getRandomHash,
@@ -21,7 +20,6 @@ import {
   updateLastBlockData,
   getJSONBody,
   getBlockHash,
-  getZeroString,
   getJSONHeaderFromBlock,
   isHashMined,
   deleteLastBlock,
@@ -29,9 +27,14 @@ import {
   jitcoinFileByNumber,
   getFileAsArray,
   getFileCount,
-  checkWallet,
   getPublicKey,
-  verifySignature
+  verifySignature,
+  verifyBlock,
+  walletExists,
+  createWallet,
+  checkPassphrase,
+  verifyReward,
+  getBlockByHash
 } from './misc/helper';
 import { Transaction, Data, Block } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
@@ -44,53 +47,46 @@ app.get(MINE, express.json(), async (_, res) => {
   const block = await getLastBlock();
 
   if (block !== null) {
-    if (
-      getBlockHash(block.data.getData(), block.nonce).substring(
-        0,
-        DIFFICULTY
-      ) !== getZeroString()
-    ) {
-      if (block.data.transactions.length === TRANSACTIONS_PER_BLOCK) {
-        // verifying the transactions
-        const transactions = block.data.transactions;
+    const valid = verifyBlock(block);
+    if (valid[0] === true) {
+      if (valid[1] === true) {
+        if (valid[2] === -1) {
+          const reward = verifyReward(block);
+          if (reward.length === 2) {
+            await block.mine();
 
-        let valid = -1;
+            const header = getJSONHeaderFromBlock(block);
+            const body = getJSONBody(block.data.transactions);
 
-        for (let i = 0; i < transactions.length; i++) {
-          if (!transactions[i].verify()) {
-            valid = i;
-            break;
+            sendResponse(
+              res,
+              `Block was mined successfully! You gained a reward of ${reward[1]} JitCoins!⛏️`,
+              RESPONSE_CODES.PASS,
+              [header, body]
+            );
+          } else {
+            sendResponse(
+              res,
+              `The input/output values are wrong in the following block: ${reward}!😞`,
+              RESPONSE_CODES.INVALID_SIGNATURE
+            );
           }
-        }
-
-        if (valid) {
-          await block.mine();
-
-          const header = getJSONHeaderFromBlock(block);
-          const body = getJSONBody(block.data.transactions);
-
-          sendResponse(
-            res,
-            'Block was mined successfully!⛏️',
-            RESPONSE_CODES.PASS,
-            [header, body]
-          );
         } else {
           sendResponse(
             res,
-            `The signature of Block number ${valid} is invalid!😞`,
+            `The signature of Block number ${valid[2]} is invalid!😞`,
             RESPONSE_CODES.INVALID_SIGNATURE
           );
         }
       } else {
-        sendResponse(res, 'This Block is not full!😞', RESPONSE_CODES.NOT_FULL);
+        sendResponse(
+          res,
+          'This Block was already mined!😞',
+          RESPONSE_CODES.ALREADY_MINED
+        );
       }
     } else {
-      sendResponse(
-        res,
-        'This Block was already mined!😞',
-        RESPONSE_CODES.ALREADY_MINED
-      );
+      sendResponse(res, 'This Block is not full!😞', RESPONSE_CODES.NOT_FULL);
     }
   } else {
     sendResponse(
@@ -101,12 +97,13 @@ app.get(MINE, express.json(), async (_, res) => {
   }
 });
 
-app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
+app.post(PLACE_BET, express.json(), async (req, res) => {
   const body = req.body;
-  const amount: number | undefined = body.amount;
+  const inputAmount: number | undefined = body.inputAmount;
+  const outputAmount: number | undefined = body.outputAmount;
 
   if (passphrase !== undefined) {
-    if (amount !== undefined) {
+    if (inputAmount !== undefined && outputAmount !== undefined) {
       const randomHash: string = getRandomHash();
       const block = await getLastBlock();
 
@@ -118,7 +115,8 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
           const transaction = new Transaction(
             (await getPublicKey()).toString(),
             randomHash,
-            amount
+            inputAmount,
+            outputAmount,
           );
           await transaction.sign(passphrase);
 
@@ -148,31 +146,63 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
               RESPONSE_CODES.MINE_BLOCK
             );
           } else if (block.hash !== '') {
+            const transaction = new Transaction(
+              (await getPublicKey()).toString(),
+              getRandomHash(),
+              inputAmount,
+              outputAmount,
+            );
+            await transaction.sign(passphrase);
+
+            const data = new Data(transaction);
+            const newBlock = new Block(block.hash, data);
+            await newBlock.save();
+
+            const header = getJSONHeaderFromBlock(newBlock);
+            const body = getJSONBody(newBlock.data.transactions);
+
             sendResponse(
               res,
-              'The last block was already mined but no new block was created yet!😞',
-              RESPONSE_CODES.NEW_BLOCK
+              'The new Block was created successfully!👍',
+              RESPONSE_CODES.PASS,
+              [header, body]
             );
           }
         }
       } else {
+        const transaction = new Transaction(
+          (await getPublicKey()).toString(),
+          getRandomHash(),
+          inputAmount,
+          outputAmount,
+        );
+        await transaction.sign(passphrase);
+
+        const data = new Data(transaction);
+        const block = new Block(null, data);
+        await block.save();
+
+        const header = getJSONHeaderFromBlock(block);
+        const body = getJSONBody(block.data.transactions);
+
         sendResponse(
           res,
-          'No Jitcoin file found!😠',
-          RESPONSE_CODES.NO_BLOCK_ON_DISK
+          'The new Block was created successfully!👍',
+          RESPONSE_CODES.PASS,
+          [header, body]
         );
       }
     } else {
       sendResponse(
         res,
-        'No amount parameter was provided!😞',
+        'No inputAmount or outputAmount parameter was provided!😞',
         RESPONSE_CODES.NO_AMOUNT_PROVIDED
       );
     }
   } else {
     sendResponse(
       res,
-      'No passphrase found. Try to /initWallet first!😞',
+      'No passphrase found. Try to /unlockWallet first!😞',
       RESPONSE_CODES.NO_PASSPHRASE
     );
   }
@@ -198,62 +228,29 @@ app.get(LAST_BLOCK, express.json(), async (req, res) => {
   }
 });
 
-app.post(NEW_BLOCK, express.json(), async (req, res) => {
-  const lastBlock = await getLastBlock();
-  const body = req.body;
-  const amount: number | undefined = body.amount;
-  const gameType: number = body.gameType;
 
-  if (passphrase !== undefined) {
-    if (amount !== undefined) {
-      let previousHash: string | null = null;
+app.get(GET_BLOCK_BY_HASH, express.json(), async (req, res) => {
+  const body = req.body();
+  const hash: string = body.hash;
 
-      if (lastBlock !== null) {
-        previousHash = getBlockHash(lastBlock.data.getData(), lastBlock.nonce);
-      }
+  const block = await getBlockByHash(hash);
+  
+  if (block !== null) {
+    const header = getJSONHeaderFromBlock(block);
+    const body = getJSONBody(block.data.transactions);
 
-      if (isHashMined(previousHash)) {
-        const transaction = new Transaction(
-          (await getPublicKey()).toString(),
-          getRandomHash(),
-          amount
-        );
-        await transaction.sign(passphrase);
-
-        const data = new Data(transaction);
-        const block = new Block(previousHash, data, gameType);
-        await block.save();
-
-        const header = getJSONHeaderFromBlock(block);
-        const body = getJSONBody(block.data.transactions);
-
-        sendResponse(
-          res,
-          'The new Block was created successfully!👍',
-          RESPONSE_CODES.PASS,
-          [header, body]
-        );
-      } else {
-        sendResponse(
-          res,
-          'The previous block was not mined!😠',
-          RESPONSE_CODES.NOT_YET_MINED
-        );
-      }
-    } else {
-      sendResponse(
-        res,
-        'No amount parameter was provided!😞',
-        RESPONSE_CODES.NO_AMOUNT_PROVIDED
-      );
-    }
+    sendResponse(res, 'Here is the requested block!👍', RESPONSE_CODES.PASS, [
+      header,
+      [header, body]
+    ]);
   } else {
     sendResponse(
       res,
-      'No passphrase found. Try to /initWallet first!😞',
-      RESPONSE_CODES.NO_PASSPHRASE
+      'No Jitcoin file found!😠',
+      RESPONSE_CODES.NO_BLOCK_ON_DISK
     );
   }
+
 });
 
 app.get(DELETE_LAST_BLOCK, express.json(), async (req, res) => {
@@ -328,16 +325,36 @@ app.get(FILE_COUNT, express.json(), async (_req, res) => {
   }
 });
 
-app.post(INIT_WALLET, express.json(), async (req, res) => {
+app.post(CREATE_WALLET, express.json(), async (req, res) => {
   const body = req.body;
-  passphrase = body.passphrase;
 
-  await checkWallet(passphrase);
-
-  sendResponse(res, 'Passphrase was saved.👍', RESPONSE_CODES.PASSPHRASE_SAVED);
+  if (!(await walletExists())) {
+    if (await createWallet(body.passphrase)) {
+      passphrase = body.passphrase;
+      sendResponse(res, 'The Wallet was created successfully!👍', RESPONSE_CODES.PASSPHRASE_SAVED);
+    } else {
+      sendResponse(res, 'There was an error while creating the wallet.😞', RESPONSE_CODES.WALLET_CREATION_ERROR);
+    }
+  } else {
+    sendResponse(res, 'There already is a wallet saved on your disk!😞', RESPONSE_CODES.WALLET_EXISTS);
+  }
 });
 
-app.post(VERIFY_SIGNATURE, express.json(), async (req, res) => {
+app.post(UNLOCK_WALLET, express.json(), async (req, res) => {
+  const body = req.body;
+  if (await walletExists()) {
+    if (await checkPassphrase(body.passphrase)) {
+      passphrase = body.passphrase;
+      sendResponse(res, 'The passphrase was saved successfully!👍', RESPONSE_CODES.PASSPHRASE_SAVED);
+    } else {
+      sendResponse(res, 'The entered passphrase is incorrect!😞', RESPONSE_CODES.WRONG_PASSPHRASE);
+    }
+  } else {
+    sendResponse(res, 'There is no wallet saved on your disk. Call /createWallet first!😞', RESPONSE_CODES.NO_WALLET);
+  }
+});
+
+/*app.post(VERIFY_SIGNATURE, express.json(), async (req, res) => {
   const body = req.body;
   const signature = body.signature;
   const hash = body.hash;
@@ -355,7 +372,7 @@ app.post(VERIFY_SIGNATURE, express.json(), async (req, res) => {
     ).toString(),
     RESPONSE_CODES.PASS
   );
-});
+});*/
 
 app.listen(PORT, () => {
   console.log(`server is up and running! We are listening on ${PORT}`);

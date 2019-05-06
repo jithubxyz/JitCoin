@@ -29,6 +29,8 @@ export const JITCOIN_FILE = `${JITCOIN_FILE_STARTER}$${JITCOIN_FILE_ENDING}`;
 
 export const JITCOIN_FILE_ZEROS = 8;
 
+export const MINIMUM_REWARD_PERCENTAGE = .1;
+
 // max file size in bytes (300kb for testing)
 export const MAX_FILE_SIZE = 300000;
 //export const MAX_FILE_SIZE = 10000000;
@@ -55,7 +57,11 @@ export enum RESPONSE_CODES {
   PATH_NOT_FOUND,
   PASSPHRASE_SAVED,
   NO_PASSPHRASE,
-  INVALID_SIGNATURE
+  INVALID_SIGNATURE,
+  WALLET_CREATION_ERROR,
+  WALLET_EXISTS,
+  WRONG_PASSPHRASE,
+  NO_WALLET
 }
 
 //GameTypes
@@ -68,12 +74,13 @@ export enum GAME_TYPES{
 // Endpoints
 
 export const MINE = '/mine';
-export const ADD_TRANSACTION = '/addTransaction';
 export const LAST_BLOCK = '/lastBlock';
-export const NEW_BLOCK = '/newBlock';
+export const PLACE_BET = '/placeBet';
 export const DELETE_LAST_BLOCK = '/deleteLastBlock';
 export const LENGTH = '/length';
 export const FILE_AS_ARRAY = '/fileAsArray';
 export const FILE_COUNT = '/fileCount';
-export const INIT_WALLET = '/initWallet';
+export const CREATE_WALLET = '/createWallet';
+export const UNLOCK_WALLET = '/unlockWallet';
 export const VERIFY_SIGNATURE = '/verifySignature';
+export const GET_BLOCK_BY_HASH = '/blockByHash';

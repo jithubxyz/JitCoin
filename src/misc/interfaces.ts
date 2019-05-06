@@ -19,9 +19,11 @@ export interface BlockBody {
 
 export interface TransactionElement {
   publicKey: string;
+  publicKeyHash: string;
   signature: string;
   randomHash: string;
-  amount: number;
+  inputAmount: number;
+  outputAmount: number;
 }
 
 export interface MiningChild {

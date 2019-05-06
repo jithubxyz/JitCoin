@@ -23,7 +23,9 @@ import {
   WALLET_DIR,
   PUBLIC_KEY_FILE_ENDING,
   PRIVATE_KEY_FILE_ENDING,
-  WALLET_FILE_STARTER
+  WALLET_FILE_STARTER,
+  TRANSACTIONS_PER_BLOCK,
+  MINIMUM_REWARD_PERCENTAGE
 } from './constants';
 import { Transaction, Block, Data } from '../jitcoin/block';
 import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
@@ -107,11 +109,12 @@ const decompress = (buffer: Buffer): Promise<Buffer> => {
     });
   });
 };
+
 const key = (
   type: 'rsa',
   options: RSAKeyPairOptions<'pem', 'pem'>
-): Promise<{ privateKey: string; publicKey: string } | null> =>
-  new Promise((resolve, reject) => {
+): Promise<{ privateKey: string; publicKey: string } | null> => {
+  return new Promise((resolve, reject) => {
     generateKeyPair(type, options, (err, publicKey, privateKey) => {
       if (err) {
         return reject(err);
@@ -119,6 +122,7 @@ const key = (
       resolve({ privateKey, publicKey });
     });
   });
+}
 
 /**
  *
@@ -202,6 +206,34 @@ export const getLastBlock = (): Promise<Block | null> => {
   });
 };
 
+/**
+ * 
+ * @author Eleftherios Pavlidis
+ * @param hash 
+ * @returns {Promise<Block | null>}
+ */
+export const getBlockByHash = async (hash: string): Promise<Block | null> => {
+  if (!(await jitcoinPathExists())) {
+    return null;
+  }
+  const count = await getFileCount();
+
+  for(let i = count; i >= 0; i--){
+    const file = jitcoinFileByNumber(i);
+
+    const blocks = await getFileAsArray(file);
+
+    if(blocks !== null){
+      for(const block of blocks){
+        if(block.hash === hash){
+          return block;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 export const parseFileData = (data: Buffer): Promise<Block> => {
   return new Promise(async resolve => {
     const delimiterPostion = Buffer.from(DELIMITER).byteLength;
@@ -239,7 +271,8 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
       const transaction = new Transaction(
         transactionItem.publicKey,
         transactionItem.randomHash,
-        transactionItem.amount,
+        transactionItem.inputAmount,
+        transactionItem.outputAmount,
         transactionItem.signature
       );
 
@@ -423,7 +456,8 @@ export const getJSONBody = (transactions: Transaction[]): BlockBody => {
 
   for (const transaction of transactions) {
     trans.push({
-      amount: transaction.amount,
+      inputAmount: transaction.inputAmount,
+      outputAmount: transaction.outputAmount,
       randomHash: transaction.randomHash,
       signature: transaction.signature,
       publicKey: transaction.publicKey
@@ -652,7 +686,7 @@ export const getFileCount = async (): Promise<number> => {
   return files.length;
 };
 
-export const checkWallet = async (passphrase: string) => {
+export const createWallet = async (passphrase: string): Promise<boolean> => {
   const publicKeyFile = pathResolve(
     WALLET_DIR,
     `${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`
@@ -666,35 +700,71 @@ export const checkWallet = async (passphrase: string) => {
     await createDir();
   }
 
-  const publicKeyExists = await fileExists(publicKeyFile);
-  const privateKeyExists = await fileExists(privateKeyFile);
-
-  if (!publicKeyExists || !privateKeyExists) {
-    const keys = await key('rsa', {
-      modulusLength: 4096,
-      publicKeyEncoding: {
-        type: 'spki',
-        format: 'pem'
-      },
-      privateKeyEncoding: {
-        type: 'pkcs8',
-        format: 'pem',
-        cipher: 'aes-256-cbc',
-        passphrase
-      }
-    });
-
-    console.log('created new private and public key!');
-
-    if (keys !== null) {
-      await write(publicKeyFile, keys.publicKey);
-      await write(privateKeyFile, keys.privateKey);
+  const keys = await key('rsa', {
+    modulusLength: 4096,
+    publicKeyEncoding: {
+      type: 'spki',
+      format: 'pem',
+    },
+    privateKeyEncoding: {
+      type: 'pkcs8',
+      format: 'pem',
+      cipher: 'aes-256-cbc',
+      passphrase
     }
+  });
+
+  console.log('created new private and public key!');
+
+  if (keys !== null) {
+    await write(publicKeyFile, keys.publicKey);
+    await write(privateKeyFile, keys.privateKey);
+    return true;
+  } else {
+    return false;
   }
 };
 
+export const walletExists = async (): Promise<boolean> => {
+  const publicKeyFile = pathResolve(
+    WALLET_DIR,
+    `${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`
+  );
+  const privateKeyFile = pathResolve(
+    WALLET_DIR,
+    `${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`
+  );
+  const publicKeyExists = await fileExists(publicKeyFile);
+  const privateKeyExists = await fileExists(privateKeyFile);
+  return publicKeyExists || privateKeyExists;
+};
+
+export const checkPassphrase = async (passphrase: string): Promise<boolean> => {
+  const privateKeyFile = pathResolve(
+    WALLET_DIR,
+    `${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`
+  );
+  const privateKey = await read(privateKeyFile);
+  try {
+    createPrivateKey({
+      key: privateKey,
+      passphrase
+    });
+    return true;
+  } catch (error) {
+    if (error instanceof Error) {
+      if (error.message.includes('EVP_DecryptFinal_ex')) {
+        return false;
+      }
+      throw error;
+    }
+  }
+  return false;
+};
+
 export const signTransaction = async (
-  amount: number,
+  inputAmount: number,
+  outputAmount: number,
   randomHash: string,
   passphrase: string
 ) => {
@@ -723,7 +793,7 @@ export const signTransaction = async (
   const publicKey = (await read(publicKeyFile)).toString();
 
   const sign = createSign('RSA-SHA512');
-  sign.update(`${amount}${randomHash}${publicKey}`);
+  sign.update(`${inputAmount}${outputAmount}${randomHash}${publicKey}`);
 
   return sign.sign(keyObject, 'hex');
 };
@@ -735,16 +805,91 @@ export const getPublicKey = async () => {
 };
 
 export const verifySignature = (
-  amount: number,
+  inputAmount: number,
+  outputAmount: number,
   randomHash: string,
   publicKey: string,
   signature: string
 ) => {
   const keyObject = createPublicKey({
-    key: publicKey
+    key: `${publicKey}`
   });
 
   const verify = createVerify('RSA-SHA512');
-  verify.update(`${amount}${randomHash}${publicKey}`);
+  verify.update(`${inputAmount}${outputAmount}${randomHash}${publicKey}`);
   return verify.verify(keyObject, signature, 'hex');
 };
+
+export const verifyBlock = (block: Block): Array<number | boolean> => {
+  const response = [];
+  response.push(block.data.transactions.length === TRANSACTIONS_PER_BLOCK);
+  if (
+    getBlockHash(block.data.getData(), block.nonce).substring(
+      0,
+      DIFFICULTY
+    ) !== getZeroString()
+  ) {
+    response.push(true);
+    const transactions = block.data.transactions;
+    const publicKeys = [];
+    response.push(-1);
+    for (let i = 0; i < transactions.length; i++) {
+      publicKeys.push(transactions[i].publicKey);
+      if (!transactions[i].verify()) {
+        response.pop();
+        response.push(i);
+        return response;
+      }
+    }
+    response.push(hasDuplicates(publicKeys));
+  } else {
+    response.push(false);
+  }
+  return response;
+};
+
+export const verifyReward = (block: Block): number[] => {
+  const response = [];
+  let reward = 0;
+  const transactions = block.data.transactions;
+  for (let i = 0; i < transactions.length; i++) {
+    const transaction = transactions[i];
+    if (transaction.inputAmount - transaction.outputAmount < 0) {
+      response.push(0);
+      response.push(i);
+    } else if (transaction.outputAmount > transaction.inputAmount) {
+      response.push(-1);
+      response.push(i);
+    } else if ((transaction.inputAmount - transaction.outputAmount) <= transaction.inputAmount * MINIMUM_REWARD_PERCENTAGE) {
+      response.push(-2);
+      response.push(i);
+    } else {
+      reward += transaction.inputAmount - transaction.outputAmount;
+    }
+  }
+  response.push(-3);
+  response.push(reward);
+  return response;
+};
+
+const hasDuplicates = (array: string[]) => {
+  return (new Set(array)).size !== array.length;
+};
+
+/*const getCurrentBalance = async (): Promise<number> => {
+  const balance = 0;
+  let count = await getFileCount();
+  while(count !== 0){
+    const file = JITCOIN_FILE_STARTER + appendZeros(count) + JITCOIN_FILE_ENDING;
+    const blockArray = await getFileAsArray(file);
+    if(blockArray !== null){
+      for(let i = 0; i < blockArray.length; i++){
+        const block = blockArray[i];
+        if(block.data.transactions.){
+
+        }
+      }
+    }
+    count--;
+  }
+}*/
