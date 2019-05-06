@@ -7,7 +7,7 @@ export const VERSION = 1;
 
 export const TRANSACTIONS_PER_BLOCK = 10;
 
-export const DIFFICULTY = 2;
+export const DIFFICULTY = 4;
 
 export const JITCOIN_DIR = './.jitcoin';
 
@@ -68,6 +68,7 @@ export enum RESPONSE_CODES {
 
 export const MINE = '/mine';
 export const ADD_TRANSACTION = '/addTransaction';
+export const PLACE_BET = '/placeBet';
 export const LAST_BLOCK = '/lastBlock';
 export const NEW_BLOCK = '/newBlock';
 export const DELETE_LAST_BLOCK = '/deleteLastBlock';

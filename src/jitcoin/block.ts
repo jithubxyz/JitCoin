@@ -196,6 +196,7 @@ export class Data {
  */
 export class Transaction {
   signature: string | null = null;
+  publicKeyHash: string;
   publicKey: string;
   randomHash: string;
   inputAmount: number;
@@ -216,7 +217,8 @@ export class Transaction {
     outputAmount: number,
     signature?: string | undefined
   ) {
-    this.publicKey = getBlockHash(publicKey);
+    this.publicKeyHash = getBlockHash(publicKey);
+    this.publicKey = publicKey;
     this.randomHash = randomHash;
     this.inputAmount = inputAmount;
     this.outputAmount = outputAmount;
