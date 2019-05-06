@@ -3,16 +3,13 @@ import {
   PORT,
   TRANSACTIONS_PER_BLOCK,
   RESPONSE_CODES,
-  DIFFICULTY,
+  PLACE_BET,
   MINE,
-  ADD_TRANSACTION,
   LAST_BLOCK,
-  VERIFY_SIGNATURE,
   FILE_COUNT,
   FILE_AS_ARRAY,
   LENGTH,
   DELETE_LAST_BLOCK,
-  NEW_BLOCK,
   CREATE_WALLET,
   UNLOCK_WALLET,
   GET_BLOCK_BY_HASH
@@ -100,7 +97,7 @@ app.get(MINE, express.json(), async (_, res) => {
   }
 });
 
-app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
+app.post(PLACE_BET, express.json(), async (req, res) => {
   const body = req.body;
   const inputAmount: number | undefined = body.inputAmount;
   const outputAmount: number | undefined = body.outputAmount;
@@ -149,18 +146,50 @@ app.post(ADD_TRANSACTION, express.json(), async (req, res) => {
               RESPONSE_CODES.MINE_BLOCK
             );
           } else if (block.hash !== '') {
+            const transaction = new Transaction(
+              (await getPublicKey()).toString(),
+              getRandomHash(),
+              inputAmount,
+              outputAmount,
+            );
+            await transaction.sign(passphrase);
+    
+            const data = new Data(transaction);
+            const newBlock = new Block(block.hash, data);
+            await newBlock.save();
+    
+            const header = getJSONHeaderFromBlock(newBlock);
+            const body = getJSONBody(newBlock.data.transactions);
+    
             sendResponse(
               res,
-              'The last block was already mined but no new block was created yet!😞',
-              RESPONSE_CODES.NEW_BLOCK
+              'The new Block was created successfully!👍',
+              RESPONSE_CODES.PASS,
+              [header, body]
             );
           }
         }
       } else {
+        const transaction = new Transaction(
+          (await getPublicKey()).toString(),
+          getRandomHash(),
+          inputAmount,
+          outputAmount,
+        );
+        await transaction.sign(passphrase);
+
+        const data = new Data(transaction);
+        const block = new Block(null, data);
+        await block.save();
+
+        const header = getJSONHeaderFromBlock(block);
+        const body = getJSONBody(block.data.transactions);
+
         sendResponse(
           res,
-          'No Jitcoin file found!😠',
-          RESPONSE_CODES.NO_BLOCK_ON_DISK
+          'The new Block was created successfully!👍',
+          RESPONSE_CODES.PASS,
+          [header, body]
         );
       }
     } else {
@@ -221,65 +250,6 @@ app.get(GET_BLOCK_BY_HASH, express.json(), async(req,res) => {
     );
   }
 
-});
-
-app.post(NEW_BLOCK, express.json(), async (req, res) => {
-  const lastBlock = await getLastBlock();
-  const body = req.body;
-  const inputAmount: number | undefined = body.inputAmount;
-  const outputAmount: number | undefined = body.outputAmount;
-
-  if (passphrase !== undefined) {
-    if (inputAmount !== undefined && outputAmount !== undefined) {
-      let previousHash: string | null = null;
-
-      if (lastBlock !== null) {
-        previousHash = getBlockHash(lastBlock.data.getData(), lastBlock.nonce);
-      }
-
-      if (isHashMined(previousHash)) {
-        const transaction = new Transaction(
-          (await getPublicKey()).toString(),
-          getRandomHash(),
-          inputAmount,
-          outputAmount,
-        );
-        await transaction.sign(passphrase);
-
-        const data = new Data(transaction);
-        const block = new Block(previousHash, data);
-        await block.save();
-
-        const header = getJSONHeaderFromBlock(block);
-        const body = getJSONBody(block.data.transactions);
-
-        sendResponse(
-          res,
-          'The new Block was created successfully!👍',
-          RESPONSE_CODES.PASS,
-          [header, body]
-        );
-      } else {
-        sendResponse(
-          res,
-          'The previous block was not mined!😠',
-          RESPONSE_CODES.NOT_YET_MINED
-        );
-      }
-    } else {
-      sendResponse(
-        res,
-        'No inputAmount or outputAmount parameter was provided!😞',
-        RESPONSE_CODES.NO_AMOUNT_PROVIDED
-      );
-    }
-  } else {
-    sendResponse(
-      res,
-      'No passphrase found. Try to /unlockWallet first!😞',
-      RESPONSE_CODES.NO_PASSPHRASE
-    );
-  }
 });
 
 app.get(DELETE_LAST_BLOCK, express.json(), async (req, res) => {

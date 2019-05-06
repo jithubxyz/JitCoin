@@ -67,9 +67,8 @@ export enum RESPONSE_CODES {
 // Endpoints
 
 export const MINE = '/mine';
-export const ADD_TRANSACTION = '/addTransaction';
 export const LAST_BLOCK = '/lastBlock';
-export const NEW_BLOCK = '/newBlock';
+export const PLACE_BET = '/placeBet';
 export const DELETE_LAST_BLOCK = '/deleteLastBlock';
 export const LENGTH = '/length';
 export const FILE_AS_ARRAY = '/fileAsArray';

@@ -842,7 +842,7 @@ export const verifyBlock = (block: Block): Array<number | boolean> => {
   return response;
 };
 
-export const verifyReward = (block: Block): Array<number> => {
+export const verifyReward = (block: Block): number[] => {
   const response = [];
   let reward = 0;
   const transactions = block.data.transactions;
@@ -856,7 +856,7 @@ export const verifyReward = (block: Block): Array<number> => {
       response.push(i);
     } else if ((transaction.inputAmount - transaction.outputAmount) <= transaction.inputAmount * MINIMUM_REWARD_PERCENTAGE) {
       response.push(-2);
-      response.push(i)
+      response.push(i);
     } else {
       reward += transaction.inputAmount - transaction.outputAmount;
     }
@@ -869,3 +869,21 @@ export const verifyReward = (block: Block): Array<number> => {
 const hasDuplicates = (array: string[]) => {
   return (new Set(array)).size !== array.length;
 };
+
+/*const getCurrentBalance = async (): Promise<number> => {
+  const balance = 0;
+  let count = await getFileCount();
+  while(count !== 0){
+    const file = JITCOIN_FILE_STARTER + appendZeros(count) + JITCOIN_FILE_ENDING;
+    const blockArray = await getFileAsArray(file);
+    if(blockArray !== null){
+      for(let i = 0; i < blockArray.length; i++){
+        const block = blockArray[i];
+        if(block.data.transactions.){
+
+        }
+      }
+    }
+    count--;
+  }
+}*/
