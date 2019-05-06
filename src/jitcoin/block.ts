@@ -41,7 +41,7 @@ export class Block {
     data: Data,
     gameType: number,
     nonce?: number | undefined,
-    hash?: string | undefined,
+    hash?: string | undefined
   ) {
     this.previousBlockHash = previousBlockHash;
     this.data = data;
@@ -122,7 +122,6 @@ export class Block {
  * @class Data
  */
 export class Data {
-
   coinbaseTransaction: CoinbaseTransaction | null;
   transactions: Transaction[];
 
@@ -200,14 +199,23 @@ export class Data {
     for (const transaction of this.transactions) {
       randomHashes.push(transaction.randomHash);
     }
-    this.coinbaseTransaction = new CoinbaseTransaction((await getPublicKey()).toString('utf8'), randomHashes);
+    this.coinbaseTransaction = new CoinbaseTransaction(
+      (await getPublicKey()).toString('utf8'),
+      randomHashes
+    );
   }
 
   async signCoinbaseTransaction(passphrase: string): Promise<boolean> {
-    if (this.coinbaseTransaction !== null && this.coinbaseTransaction !== undefined) {
+    if (
+      this.coinbaseTransaction !== null &&
+      this.coinbaseTransaction !== undefined
+    ) {
       const transactionSignatures = [];
       for (const transaction of this.transactions) {
-        if (transaction.signature !== null && transaction.signature !== undefined) {
+        if (
+          transaction.signature !== null &&
+          transaction.signature !== undefined
+        ) {
           transactionSignatures.push(transaction.signature);
         } else {
           return false;
@@ -229,7 +237,6 @@ export class Data {
  * @class Transaction
  */
 export class Transaction {
-
   signature: string | null = null;
   publicKeyHash: string;
   publicKey: string;
@@ -293,17 +300,16 @@ export class Transaction {
     return this.signature === null
       ? false
       : verifySignature(
-        this.inputAmount,
-        this.outputAmount,
-        this.randomHash,
-        this.publicKey,
-        this.signature
-      );
+          this.inputAmount,
+          this.outputAmount,
+          this.randomHash,
+          this.publicKey,
+          this.signature
+        );
   }
 }
 
 export class CoinbaseTransaction {
-
   publicKey: string;
   winningHash: string;
   signature: string | null;
@@ -315,6 +321,10 @@ export class CoinbaseTransaction {
   }
 
   async sign(transactionSignatures: string[], passphrase: string) {
-    this.signature = await signCoinbaseTransaction(this.winningHash, transactionSignatures, passphrase);
+    this.signature = await signCoinbaseTransaction(
+      this.winningHash,
+      transactionSignatures,
+      passphrase
+    );
   }
 }

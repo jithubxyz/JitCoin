@@ -27,8 +27,18 @@ import {
   TRANSACTIONS_PER_BLOCK,
   MINIMUM_REWARD_PERCENTAGE
 } from './constants';
-import { Transaction, Block, Data, CoinbaseTransaction } from '../jitcoin/block';
-import { BlockHeader, TransactionElement, BlockBody, CoinbaseTransactionElement } from './interfaces';
+import {
+  Transaction,
+  Block,
+  Data,
+  CoinbaseTransaction
+} from '../jitcoin/block';
+import {
+  BlockHeader,
+  TransactionElement,
+  BlockBody,
+  CoinbaseTransactionElement
+} from './interfaces';
 import {
   createHash,
   generateKeyPair,
@@ -123,7 +133,7 @@ const key = (
       resolve({ privateKey, publicKey });
     });
   });
-}
+};
 
 /**
  *
@@ -164,7 +174,12 @@ export const saveBinaryHex = (
     const headerSize = headerCompressed.byteLength;
 
     const bodyCompressed = await compress(
-      Buffer.from(JSON.stringify(getJSONBody(data.transactions, data.coinbaseTransaction)), 'utf8')
+      Buffer.from(
+        JSON.stringify(
+          getJSONBody(data.transactions, data.coinbaseTransaction)
+        ),
+        'utf8'
+      )
     );
 
     const bodySize = bodyCompressed.byteLength;
@@ -208,9 +223,9 @@ export const getLastBlock = (): Promise<Block | null> => {
 };
 
 /**
- * 
+ *
  * @author Eleftherios Pavlidis
- * @param hash 
+ * @param hash
  * @returns {Promise<Block | null>}
  */
 export const getBlockByHash = async (hash: string): Promise<Block | null> => {
@@ -219,21 +234,23 @@ export const getBlockByHash = async (hash: string): Promise<Block | null> => {
   }
   const count = await getFileCount();
 
-  for (let i = count; i >= 0; i--) {
+  for (let i = count - 1; i >= 0; i--) {
     const file = jitcoinFileByNumber(i);
-
     const blocks = await getFileAsArray(file);
 
-    if (blocks !== null) {
-      for (const block of blocks) {
-        if (block.hash === hash) {
-          return block;
-        }
+    if (blocks === null) {
+      return null;
+    }
+
+    for (const block of blocks) {
+      if (block.hash === hash) {
+        return block;
       }
     }
   }
+
   return null;
-}
+};
 
 export const parseFileData = (data: Buffer): Promise<Block> => {
   return new Promise(async resolve => {
@@ -286,14 +303,17 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
     }
 
     if (blockData !== null) {
-
       if (decompressedBody.coinbaseTransaction !== null) {
         const randomHashes = [];
         for (const transaction of blockData.transactions) {
           randomHashes.push(transaction.randomHash);
         }
-        blockData.coinbaseTransaction = new CoinbaseTransaction(decompressedBody.coinbaseTransaction.publicKey, randomHashes);
-        blockData.coinbaseTransaction.signature = decompressedBody.coinbaseTransaction.signature;
+        blockData.coinbaseTransaction = new CoinbaseTransaction(
+          decompressedBody.coinbaseTransaction.publicKey,
+          randomHashes
+        );
+        blockData.coinbaseTransaction.signature =
+          decompressedBody.coinbaseTransaction.signature;
       }
 
       // recalculating the hash with the given nonce
@@ -464,7 +484,10 @@ export const getJSONHeaderFromBlock = (
  * @param {BlockHeader} header
  * @returns {JSON} Header Object
  */
-export const getJSONBody = (transactions: Transaction[], coinbaseTransaction?: CoinbaseTransaction | null): BlockBody => {
+export const getJSONBody = (
+  transactions: Transaction[],
+  coinbaseTransaction?: CoinbaseTransaction | null
+): BlockBody => {
   const trans = [];
 
   for (const transaction of transactions) {
@@ -483,7 +506,7 @@ export const getJSONBody = (transactions: Transaction[], coinbaseTransaction?: C
     coinbaseTransactionElement = {
       publicKey: coinbaseTransaction.publicKey,
       signature: coinbaseTransaction.signature,
-      winningHash: coinbaseTransaction.winningHash,
+      winningHash: coinbaseTransaction.winningHash
     } as CoinbaseTransactionElement;
   }
 
@@ -728,7 +751,7 @@ export const createWallet = async (passphrase: string): Promise<boolean> => {
     modulusLength: 4096,
     publicKeyEncoding: {
       type: 'spki',
-      format: 'pem',
+      format: 'pem'
     },
     privateKeyEncoding: {
       type: 'pkcs8',
@@ -825,7 +848,7 @@ export const signTransaction = async (
 export const signCoinbaseTransaction = async (
   winningHash: string,
   transactionSignatures: string[],
-  passphrase: string,
+  passphrase: string
 ) => {
   const publicKeyFile = pathResolve(
     WALLET_DIR,
@@ -883,10 +906,8 @@ export const verifyBlock = (block: Block): Array<number | boolean> => {
   const response = [];
   response.push(block.data.transactions.length === TRANSACTIONS_PER_BLOCK);
   if (
-    getBlockHash(block.data.getData(), block.nonce).substring(
-      0,
-      DIFFICULTY
-    ) !== getZeroString()
+    getBlockHash(block.data.getData(), block.nonce).substring(0, DIFFICULTY) !==
+    getZeroString()
   ) {
     response.push(true);
     const transactions = block.data.transactions;
@@ -919,7 +940,10 @@ export const verifyReward = (block: Block): number[] => {
     } else if (transaction.outputAmount > transaction.inputAmount) {
       response.push(-1);
       response.push(i);
-    } else if ((transaction.inputAmount - transaction.outputAmount) <= transaction.inputAmount * MINIMUM_REWARD_PERCENTAGE) {
+    } else if (
+      transaction.inputAmount - transaction.outputAmount <=
+      transaction.inputAmount * MINIMUM_REWARD_PERCENTAGE
+    ) {
       response.push(-2);
       response.push(i);
     } else {
@@ -941,7 +965,7 @@ const getReward = (transactions: Transaction[]): number => {
 };
 
 const hasDuplicates = (array: string[]) => {
-  return (new Set(array)).size !== array.length;
+  return new Set(array).size !== array.length;
 };
 
 export const getRandomHashesFromData = (data: Data): string[] => {
@@ -962,7 +986,7 @@ export const getTransactionSignaturesFromData = (data: Data): string[] => {
 
 export const getBalance = async (): Promise<number> => {
   if (await jitcoinPathExists()) {
-    let balance = .0;
+    let balance = 0.0;
     let count = await getFileCount();
     const publicKey = (await getPublicKey()).toString('utf8');
     while (count > 0) {
@@ -971,7 +995,10 @@ export const getBalance = async (): Promise<number> => {
       if (blocks !== undefined && blocks !== null) {
         for (const block of blocks) {
           const coinbaseTransaction = block.data.coinbaseTransaction;
-          if (coinbaseTransaction !== null && coinbaseTransaction !== undefined) {
+          if (
+            coinbaseTransaction !== null &&
+            coinbaseTransaction !== undefined
+          ) {
             if (coinbaseTransaction.publicKey === publicKey) {
               balance += getReward(block.data.transactions);
             }

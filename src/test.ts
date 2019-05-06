@@ -6,8 +6,7 @@ import {
   getLastBlock,
   getRandomHash,
   getPublicKey,
-  createWallet,
-  checkPassphrase
+  createWallet
 } from './misc/helper';
 import { MINIMUM_REWARD_PERCENTAGE } from './misc/constants';
 import { GAME_TYPES } from './misc/constants';
@@ -53,7 +52,7 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
     // just for Bruno
     console.log(
       `Found saved blockchain! Appending to existing block whose hash is ${
-      lastBlock.hash
+        lastBlock.hash
       }`
     );
     blockchain = new Blockchain(lastBlock);
@@ -73,16 +72,16 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     console.log(
       'mining took ' +
-      elapsedTime / 1000 +
-      ' seconds (' +
-      (elapsedTime / 1000 / 60).toFixed(2) +
-      ' minutes)'
+        elapsedTime / 1000 +
+        ' seconds (' +
+        (elapsedTime / 1000 / 60).toFixed(2) +
+        ' minutes)'
     );
 
     console.log(
       'My hash is: ' +
-      getBlockHash(firstBlock.data.getData(), firstBlock.nonce) +
-      '\nI am the first block!'
+        getBlockHash(firstBlock.data.getData(), firstBlock.nonce) +
+        '\nI am the first block!'
     );
 
     console.log(
@@ -102,7 +101,7 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
     const block = new Block(
       getBlockHash(
         blockchain.blocks[blockchain.blocks.length - 1].data.getData(),
-        blockchain.blocks[blockchain.blocks.length - 1].nonce,
+        blockchain.blocks[blockchain.blocks.length - 1].nonce
       ),
       await getRandomData(),
       GAME_TYPES.COIN_FLIP
@@ -116,19 +115,19 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
 
     console.log(
       'mining took ' +
-      elapsedTime / 1000 +
-      ' seconds (' +
-      (elapsedTime / 1000 / 60).toFixed(2) +
-      ' minutes)'
+        elapsedTime / 1000 +
+        ' seconds (' +
+        (elapsedTime / 1000 / 60).toFixed(2) +
+        ' minutes)'
     );
 
     console.log(
       'My hash is: ' +
-      getBlockHash(block.data.getData(), block.nonce) +
-      '\nI am the ' +
-      (i + 2) +
-      '. block! The previous hash was: ' +
-      blockchain.blocks[blockchain.blocks.length - 1].previousBlockHash
+        getBlockHash(block.data.getData(), block.nonce) +
+        '\nI am the ' +
+        (i + 2) +
+        '. block! The previous hash was: ' +
+        blockchain.blocks[blockchain.blocks.length - 1].previousBlockHash
     );
 
     console.log(
@@ -152,7 +151,7 @@ async function getRandomTransaction(): Promise<Transaction> {
     (await getPublicKey()).toString(),
     getRandomHash(),
     amount,
-    amount - (amount * MINIMUM_REWARD_PERCENTAGE)
+    amount - amount * MINIMUM_REWARD_PERCENTAGE
   );
   transaction.sign(passphrase);
   return transaction;
