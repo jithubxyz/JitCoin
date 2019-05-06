@@ -27,8 +27,8 @@ import {
   TRANSACTIONS_PER_BLOCK,
   MINIMUM_REWARD_PERCENTAGE
 } from './constants';
-import { Transaction, Block, Data } from '../jitcoin/block';
-import { BlockHeader, TransactionElement, BlockBody } from './interfaces';
+import { Transaction, Block, Data, CoinbaseTransaction } from '../jitcoin/block';
+import { BlockHeader, TransactionElement, BlockBody, CoinbaseTransactionElement } from './interfaces';
 import {
   createHash,
   generateKeyPair,
@@ -40,6 +40,7 @@ import {
 } from 'crypto';
 import { deflate, inflate } from 'zlib';
 import { resolve as pathResolve } from 'path';
+import { stringify } from 'querystring';
 
 const write = (file: string, data: string | Buffer): Promise<boolean> =>
   new Promise(resolve => {
@@ -163,7 +164,7 @@ export const saveBinaryHex = (
     const headerSize = headerCompressed.byteLength;
 
     const bodyCompressed = await compress(
-      Buffer.from(JSON.stringify(getJSONBody(data.transactions)), 'utf8')
+      Buffer.from(JSON.stringify(getJSONBody(data.transactions, data.coinbaseTransaction)), 'utf8')
     );
 
     const bodySize = bodyCompressed.byteLength;
@@ -218,14 +219,14 @@ export const getBlockByHash = async (hash: string): Promise<Block | null> => {
   }
   const count = await getFileCount();
 
-  for(let i = count; i >= 0; i--){
+  for (let i = count; i >= 0; i--) {
     const file = jitcoinFileByNumber(i);
 
     const blocks = await getFileAsArray(file);
 
-    if(blocks !== null){
-      for(const block of blocks){
-        if(block.hash === hash){
+    if (blocks !== null) {
+      for (const block of blocks) {
+        if (block.hash === hash) {
           return block;
         }
       }
@@ -261,7 +262,7 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
     const body = data.slice(bodyStart, bodyEnd);
     const decompressedBody = JSON.parse(
       (await decompress(body)).toString('utf8')
-    );
+    ) as BlockBody;
 
     // creating Block of the data gathered of the file
 
@@ -284,25 +285,37 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
       blockData.addTransaction(transaction);
     }
 
-    // recalculating the hash with the given nonce
+    if (blockData !== null) {
 
-    let hash: string | undefined = undefined;
+      if (decompressedBody.coinbaseTransaction !== null) {
+        const randomHashes = [];
+        for (const transaction of blockData.transactions) {
+          randomHashes.push(transaction.randomHash);
+        }
+        blockData.coinbaseTransaction = new CoinbaseTransaction(decompressedBody.coinbaseTransaction.publicKey, randomHashes);
+        blockData.coinbaseTransaction.signature = decompressedBody.coinbaseTransaction.signature;
+      }
 
-    if (decompressedHeader.nonce !== -1) {
-      hash = getBlockHash(
-        blockData!.getData(),
-        decompressedHeader.nonce as number
+      // recalculating the hash with the given nonce
+
+      let hash: string | undefined = undefined;
+
+      if (decompressedHeader.nonce !== -1) {
+        hash = getBlockHash(
+          blockData!.getData(),
+          decompressedHeader.nonce as number
+        );
+      }
+
+      const block = new Block(
+        decompressedHeader.previousBlockHash,
+        blockData,
+        decompressedHeader.gameType,
+        decompressedHeader.nonce,
+        hash
       );
+      resolve(block);
     }
-
-    const block = new Block(
-      decompressedHeader.previousBlockHash,
-      blockData!,
-      decompressedHeader.gameType,
-      decompressedHeader.nonce,
-      hash
-    );
-    resolve(block);
   });
 };
 
@@ -451,7 +464,7 @@ export const getJSONHeaderFromBlock = (
  * @param {BlockHeader} header
  * @returns {JSON} Header Object
  */
-export const getJSONBody = (transactions: Transaction[]): BlockBody => {
+export const getJSONBody = (transactions: Transaction[], coinbaseTransaction?: CoinbaseTransaction | null): BlockBody => {
   const trans = [];
 
   for (const transaction of transactions) {
@@ -464,8 +477,19 @@ export const getJSONBody = (transactions: Transaction[]): BlockBody => {
     } as TransactionElement);
   }
 
+  let coinbaseTransactionElement = null;
+
+  if (coinbaseTransaction !== null && coinbaseTransaction !== undefined) {
+    coinbaseTransactionElement = {
+      publicKey: coinbaseTransaction.publicKey,
+      signature: coinbaseTransaction.signature,
+      winningHash: coinbaseTransaction.winningHash,
+    } as CoinbaseTransactionElement;
+  }
+
   // write body
   const body = {
+    coinbaseTransaction: coinbaseTransactionElement,
     transactions: trans
   } as BlockBody;
 
@@ -798,6 +822,41 @@ export const signTransaction = async (
   return sign.sign(keyObject, 'hex');
 };
 
+export const signCoinbaseTransaction = async (
+  winningHash: string,
+  transactionSignatures: string[],
+  passphrase: string,
+) => {
+  const publicKeyFile = pathResolve(
+    WALLET_DIR,
+    `${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`
+  );
+  const privateKeyFile = pathResolve(
+    WALLET_DIR,
+    `${WALLET_FILE_STARTER}${PRIVATE_KEY_FILE_ENDING}`
+  );
+
+  if (
+    !(await fileExists(publicKeyFile)) ||
+    !(await fileExists(privateKeyFile))
+  ) {
+    return null;
+  }
+
+  const privateKey = await read(privateKeyFile);
+  const keyObject = createPrivateKey({
+    key: privateKey,
+    passphrase
+  });
+
+  const publicKey = (await read(publicKeyFile)).toString();
+
+  const sign = createSign('RSA-SHA512');
+  sign.update(`${winningHash}${stringify(transactionSignatures)}${publicKey}`);
+
+  return sign.sign(keyObject, 'hex');
+};
+
 export const getPublicKey = async () => {
   return read(
     pathResolve(WALLET_DIR, `${WALLET_FILE_STARTER}${PUBLIC_KEY_FILE_ENDING}`)
@@ -850,7 +909,7 @@ export const verifyBlock = (block: Block): Array<number | boolean> => {
 
 export const verifyReward = (block: Block): number[] => {
   const response = [];
-  let reward = 0;
+  let reward = .0;
   const transactions = block.data.transactions;
   for (let i = 0; i < transactions.length; i++) {
     const transaction = transactions[i];
@@ -872,8 +931,60 @@ export const verifyReward = (block: Block): number[] => {
   return response;
 };
 
+const getReward = (transactions: Transaction[]): number => {
+  let reward = .0;
+  for (let i = 0; i < transactions.length; i++) {
+    const transaction = transactions[i];
+    reward += transaction.inputAmount - transaction.outputAmount;
+  }
+  return reward;
+};
+
 const hasDuplicates = (array: string[]) => {
   return (new Set(array)).size !== array.length;
+};
+
+export const getRandomHashesFromData = (data: Data): string[] => {
+  const randomHashes = [];
+  for (const transaction of data.transactions) {
+    randomHashes.push(transaction.randomHash);
+  }
+  return randomHashes;
+};
+
+export const getTransactionSignaturesFromData = (data: Data): string[] => {
+  const transactionSignatures = [];
+  for (const transaction of data.transactions) {
+    transactionSignatures.push(transaction.signature!);
+  }
+  return transactionSignatures;
+};
+
+export const getBalance = async (): Promise<number> => {
+  if (await jitcoinPathExists()) {
+    let balance = .0;
+    let count = await getFileCount();
+    const publicKey = (await getPublicKey()).toString('utf8');
+    while (count > 0) {
+      count--;
+      const blocks = await getFileAsArray(jitcoinFileByNumber(count));
+      if (blocks !== undefined && blocks !== null) {
+        for (const block of blocks) {
+          const coinbaseTransaction = block.data.coinbaseTransaction;
+          if (coinbaseTransaction !== null && coinbaseTransaction !== undefined) {
+            if (coinbaseTransaction.publicKey === publicKey) {
+              balance += getReward(block.data.transactions);
+            }
+          }
+        }
+      } else {
+        return -1;
+      }
+    }
+    return balance;
+  } else {
+    return -1;
+  }
 };
 
 /*const getCurrentBalance = async (): Promise<number> => {

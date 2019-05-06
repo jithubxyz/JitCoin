@@ -63,7 +63,7 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     const data = await getRandomData();
 
-    const firstBlock = new Block(null, data, GAME_TYPES.ROULETTE);
+    const firstBlock = new Block(null, data, GAME_TYPES.COIN_FLIP);
 
     await firstBlock.mine();
 
@@ -93,30 +93,6 @@ async function randomBlockChain(blockCount: number, zeroCount: number) {
 
     followingBlocks(blockCount - 1, zeroCount);
   }
-
-  /*beforeExecution = Date.now();
-
-  const firstBlockOld = new Block(null, data, zeroCount);
-
-  firstBlockOld.mineOld();
-
-  elapsedTime = Date.now() - beforeExecution;
-
-  console.log(
-    'mining took ' +
-      elapsedTime / 1000 +
-      ' seconds (' +
-      (elapsedTime / 1000 / 60).toFixed(2) +
-      ' minutes)',
-  );
-
-  console.log(
-    'My hash is: ' + firstBlockOld.getBlockHash() + '\nI am the first block!',
-  );
-
-  console.log(
-    '____________________________________________________________________________________________________________________________________________',
-  );*/
 }
 
 async function followingBlocks(blockCount: number, zeroCount: number) {
@@ -145,18 +121,6 @@ async function followingBlocks(blockCount: number, zeroCount: number) {
       (elapsedTime / 1000 / 60).toFixed(2) +
       ' minutes)'
     );
-
-    /*console.log(
-      'My hash is: ' +
-        getBlockHash(block.data.getData(), block.nonce) +
-        '\nI am the ' +
-        (i + 2) +
-        '. block! The previous hash was: ' +
-        getBlockHash(
-          blockchain.blocks[blockchain.blocks.length - 2].data.getData(),
-          blockchain.blocks[blockchain.blocks.length - 2].nonce,
-        ),
-    );*/
 
     console.log(
       'My hash is: ' +

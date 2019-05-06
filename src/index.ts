@@ -12,7 +12,9 @@ import {
   DELETE_LAST_BLOCK,
   CREATE_WALLET,
   UNLOCK_WALLET,
-  GET_BLOCK_BY_HASH
+  GET_BLOCK_BY_HASH,
+  GAME_TYPES,
+  GET_BALANCE
 } from './misc/constants';
 import {
   getRandomHash,
@@ -34,9 +36,12 @@ import {
   createWallet,
   checkPassphrase,
   verifyReward,
-  getBlockByHash
+  getBlockByHash,
+  getRandomHashesFromData,
+  getTransactionSignaturesFromData,
+  getBalance
 } from './misc/helper';
-import { Transaction, Data, Block } from './jitcoin/block';
+import { Transaction, Data, Block, CoinbaseTransaction } from './jitcoin/block';
 import { BlockResponse } from './misc/interfaces';
 
 let passphrase: string;
@@ -44,55 +49,70 @@ let passphrase: string;
 const app = express();
 
 app.get(MINE, express.json(), async (_, res) => {
-  const block = await getLastBlock();
+  if (passphrase !== undefined && passphrase !== null) {
+    const block = await getLastBlock();
 
-  if (block !== null) {
-    const valid = verifyBlock(block);
-    if (valid[0] === true) {
-      if (valid[1] === true) {
-        if (valid[2] === -1) {
-          const reward = verifyReward(block);
-          if (reward.length === 2) {
-            await block.mine();
+    if (block !== null) {
+      const valid = verifyBlock(block);
+      if (valid[0] === true) {
+        if (valid[1] === true) {
+          if (valid[2] === -1) {
+            const reward = verifyReward(block);
+            if (reward.length === 2) {
 
-            const header = getJSONHeaderFromBlock(block);
-            const body = getJSONBody(block.data.transactions);
+              const coinbaseTransaction = new CoinbaseTransaction((await getPublicKey()).toString('utf8'), getRandomHashesFromData(block.data));
 
-            sendResponse(
-              res,
-              `Block was mined successfully! You gained a reward of ${reward[1]} JitCoins!⛏️`,
-              RESPONSE_CODES.PASS,
-              [header, body]
-            );
+              block.data.coinbaseTransaction = coinbaseTransaction;
+
+              await block.data.signCoinbaseTransaction(passphrase);
+
+              await block.mine();
+
+              const header = getJSONHeaderFromBlock(block);
+              const body = getJSONBody(block.data.transactions, block.data.coinbaseTransaction);
+
+              sendResponse(
+                res,
+                `Block was mined successfully! You gained a reward of ${reward[1]} JitCoins!⛏️`,
+                RESPONSE_CODES.PASS,
+                [header, body]
+              );
+            } else {
+              sendResponse(
+                res,
+                `The input/output values are wrong in the following block: ${reward}!😞`,
+                RESPONSE_CODES.INVALID_SIGNATURE
+              );
+            }
           } else {
             sendResponse(
               res,
-              `The input/output values are wrong in the following block: ${reward}!😞`,
+              `The signature of Block number ${valid[2]} is invalid!😞`,
               RESPONSE_CODES.INVALID_SIGNATURE
             );
           }
         } else {
           sendResponse(
             res,
-            `The signature of Block number ${valid[2]} is invalid!😞`,
-            RESPONSE_CODES.INVALID_SIGNATURE
+            'This Block was already mined!😞',
+            RESPONSE_CODES.ALREADY_MINED
           );
         }
       } else {
-        sendResponse(
-          res,
-          'This Block was already mined!😞',
-          RESPONSE_CODES.ALREADY_MINED
-        );
+        sendResponse(res, 'This Block is not full!😞', RESPONSE_CODES.NOT_FULL);
       }
     } else {
-      sendResponse(res, 'This Block is not full!😞', RESPONSE_CODES.NOT_FULL);
+      sendResponse(
+        res,
+        'There is no Block saved on your disk!😞',
+        RESPONSE_CODES.NO_BLOCK_ON_DISK
+      );
     }
   } else {
     sendResponse(
       res,
-      'There is no Block saved on your disk!😞',
-      RESPONSE_CODES.NO_BLOCK_ON_DISK
+      'No passphrase found. Try to /unlockWallet first!😞',
+      RESPONSE_CODES.NO_PASSPHRASE
     );
   }
 });
@@ -124,7 +144,7 @@ app.post(PLACE_BET, express.json(), async (req, res) => {
             const block = (await getLastBlock())!;
 
             const header = getJSONHeaderFromBlock(block);
-            const body = getJSONBody(block.data.transactions);
+            const body = getJSONBody(block.data.transactions, block.data.coinbaseTransaction);
 
             sendResponse(
               res,
@@ -155,11 +175,11 @@ app.post(PLACE_BET, express.json(), async (req, res) => {
             await transaction.sign(passphrase);
 
             const data = new Data(transaction);
-            const newBlock = new Block(block.hash, data);
+            const newBlock = new Block(block.hash, data, GAME_TYPES.COIN_FLIP);
             await newBlock.save();
 
             const header = getJSONHeaderFromBlock(newBlock);
-            const body = getJSONBody(newBlock.data.transactions);
+            const body = getJSONBody(newBlock.data.transactions, newBlock.data.coinbaseTransaction);
 
             sendResponse(
               res,
@@ -179,11 +199,11 @@ app.post(PLACE_BET, express.json(), async (req, res) => {
         await transaction.sign(passphrase);
 
         const data = new Data(transaction);
-        const block = new Block(null, data);
+        const block = new Block(null, data, GAME_TYPES.COIN_FLIP);
         await block.save();
 
         const header = getJSONHeaderFromBlock(block);
-        const body = getJSONBody(block.data.transactions);
+        const body = getJSONBody(block.data.transactions, block.data.coinbaseTransaction);
 
         sendResponse(
           res,
@@ -213,7 +233,7 @@ app.get(LAST_BLOCK, express.json(), async (req, res) => {
 
   if (block !== null) {
     const header = getJSONHeaderFromBlock(block);
-    const body = getJSONBody(block.data.transactions);
+    const body = getJSONBody(block.data.transactions, block.data.coinbaseTransaction);
 
     sendResponse(res, 'Here is the last block!👍', RESPONSE_CODES.PASS, [
       header,
@@ -234,10 +254,10 @@ app.get(GET_BLOCK_BY_HASH, express.json(), async (req, res) => {
   const hash: string = body.hash;
 
   const block = await getBlockByHash(hash);
-  
+
   if (block !== null) {
     const header = getJSONHeaderFromBlock(block);
-    const body = getJSONBody(block.data.transactions);
+    const body = getJSONBody(block.data.transactions, block.data.coinbaseTransaction);
 
     sendResponse(res, 'Here is the requested block!👍', RESPONSE_CODES.PASS, [
       header,
@@ -300,7 +320,7 @@ app.post(FILE_AS_ARRAY, express.json(), async (req, res) => {
     for (const block of blocks) {
       response.push([
         await getJSONHeaderFromBlock(block),
-        await getJSONBody(block.data.transactions)
+        await getJSONBody(block.data.transactions, block.data.coinbaseTransaction),
       ]);
     }
 
@@ -349,6 +369,14 @@ app.post(UNLOCK_WALLET, express.json(), async (req, res) => {
     } else {
       sendResponse(res, 'The entered passphrase is incorrect!😞', RESPONSE_CODES.WRONG_PASSPHRASE);
     }
+  } else {
+    sendResponse(res, 'There is no wallet saved on your disk. Call /createWallet first!😞', RESPONSE_CODES.NO_WALLET);
+  }
+});
+
+app.get(GET_BALANCE, express.json(), async (_, res) => {
+  if (await walletExists()) {
+    sendResponse(res, 'Your account balance is:', RESPONSE_CODES.PASS, await getBalance());
   } else {
     sendResponse(res, 'There is no wallet saved on your disk. Call /createWallet first!😞', RESPONSE_CODES.NO_WALLET);
   }

@@ -7,7 +7,7 @@ export const VERSION = 1;
 
 export const TRANSACTIONS_PER_BLOCK = 10;
 
-export const DIFFICULTY = 2;
+export const DIFFICULTY = 5;
 
 export const JITCOIN_DIR = './.jitcoin';
 
@@ -66,7 +66,7 @@ export enum RESPONSE_CODES {
 
 //GameTypes
 
-export enum GAME_TYPES{
+export enum GAME_TYPES {
   ROULETTE,
   COIN_FLIP
 }
@@ -84,3 +84,4 @@ export const CREATE_WALLET = '/createWallet';
 export const UNLOCK_WALLET = '/unlockWallet';
 export const VERIFY_SIGNATURE = '/verifySignature';
 export const GET_BLOCK_BY_HASH = '/blockByHash';
+export const GET_BALANCE = '/balance';
