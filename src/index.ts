@@ -228,12 +228,13 @@ app.get(LAST_BLOCK, express.json(), async (req, res) => {
   }
 });
 
+
 app.get(GET_BLOCK_BY_HASH, express.json(), async (req, res) => {
   const body = req.body();
   const hash: string = body.hash;
 
   const block = await getBlockByHash(hash);
-
+  
   if (block !== null) {
     const header = getJSONHeaderFromBlock(block);
     const body = getJSONBody(block.data.transactions);

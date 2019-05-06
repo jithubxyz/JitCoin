@@ -64,6 +64,13 @@ export enum RESPONSE_CODES {
   NO_WALLET
 }
 
+//GameTypes
+
+export enum GAME_TYPES{
+  ROULETTE,
+  COIN_FLIP
+}
+
 // Endpoints
 
 export const MINE = '/mine';

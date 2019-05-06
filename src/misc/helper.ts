@@ -136,7 +136,8 @@ export const saveBinaryHex = (
   previousBlockHash: string | null,
   merkleTree: string,
   nonce: number,
-  data: Data
+  data: Data,
+  gameType: number
 ) => {
   return new Promise(async resolve => {
     createDir();
@@ -151,7 +152,8 @@ export const saveBinaryHex = (
             merkleTree,
             nonce,
             undefined,
-            getBlockHash(data.getData(), nonce)
+            getBlockHash(data.getData(), nonce),
+            gameType
           )
         ),
         'utf8'
@@ -296,6 +298,7 @@ export const parseFileData = (data: Buffer): Promise<Block> => {
     const block = new Block(
       decompressedHeader.previousBlockHash,
       blockData!,
+      decompressedHeader.gameType,
       decompressedHeader.nonce,
       hash
     );
@@ -403,7 +406,8 @@ export const getJSONHeader = (
   merkleTree: string,
   nonce: number,
   time: undefined | number,
-  hash: string | undefined
+  hash: string | undefined,
+  gameType: number
 ): BlockHeader => {
   const header = {
     version: VERSION,
@@ -411,7 +415,8 @@ export const getJSONHeader = (
     merkleTree,
     nonce,
     time: typeof time !== 'undefined' ? time : new Date().getTime(),
-    hash
+    hash,
+    gameType
   } as BlockHeader;
 
   return header;
@@ -433,7 +438,8 @@ export const getJSONHeaderFromBlock = (
     merkleTree: block.merkleTree,
     nonce: block.nonce,
     time: typeof time !== 'undefined' ? time : new Date().getTime(),
-    hash: getBlockHash(block.data.getData(), block.nonce)
+    hash: getBlockHash(block.data.getData(), block.nonce),
+    gameType: block.gameType
   } as BlockHeader;
 
   return header;

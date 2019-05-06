@@ -24,6 +24,7 @@ export class Block {
   merkleTree: string;
   hash: string;
   nonce: number;
+  gameType: number;
 
   /**
    * Creates an instance of Block.
@@ -36,14 +37,16 @@ export class Block {
   constructor(
     previousBlockHash: string | null,
     data: Data,
+    gameType: number,
     nonce?: number | undefined,
-    hash?: string | undefined
+    hash?: string | undefined,
   ) {
     this.previousBlockHash = previousBlockHash;
     this.data = data;
     this.hash = hash ? hash : '';
     this.nonce = nonce ? nonce : -1;
     this.merkleTree = data.getMerkleTree();
+    this.gameType = gameType;
   }
 
   /**
@@ -103,7 +106,8 @@ export class Block {
       this.previousBlockHash,
       this.merkleTree,
       this.nonce,
-      this.data
+      this.data,
+      this.gameType
     );
   }
 }

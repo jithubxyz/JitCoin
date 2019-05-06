@@ -10,6 +10,7 @@ export interface BlockHeader {
   time: number;
   nonce: number;
   hash: string | null;
+  gameType: number;
 }
 
 export interface BlockBody {
