@@ -79,14 +79,14 @@ app.get(MINE, express.json(), async (_, res) => {
           );
         }
       } else {
-        sendResponse(res, 'This Block is not full!😞', RESPONSE_CODES.NOT_FULL);
+        sendResponse(
+          res,
+          'This Block was already mined!😞',
+          RESPONSE_CODES.ALREADY_MINED
+        );
       }
     } else {
-      sendResponse(
-        res,
-        'This Block was already mined!😞',
-        RESPONSE_CODES.ALREADY_MINED
-      );
+      sendResponse(res, 'This Block is not full!😞', RESPONSE_CODES.NOT_FULL);
     }
   } else {
     sendResponse(
@@ -153,14 +153,14 @@ app.post(PLACE_BET, express.json(), async (req, res) => {
               outputAmount,
             );
             await transaction.sign(passphrase);
-    
+
             const data = new Data(transaction);
             const newBlock = new Block(block.hash, data);
             await newBlock.save();
-    
+
             const header = getJSONHeaderFromBlock(newBlock);
             const body = getJSONBody(newBlock.data.transactions);
-    
+
             sendResponse(
               res,
               'The new Block was created successfully!👍',
@@ -228,7 +228,7 @@ app.get(LAST_BLOCK, express.json(), async (req, res) => {
   }
 });
 
-app.get(GET_BLOCK_BY_HASH, express.json(), async(req,res) => {
+app.get(GET_BLOCK_BY_HASH, express.json(), async (req, res) => {
   const body = req.body();
   const hash: string = body.hash;
 
