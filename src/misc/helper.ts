@@ -909,7 +909,7 @@ export const verifyBlock = (block: Block): Array<number | boolean> => {
 
 export const verifyReward = (block: Block): number[] => {
   const response = [];
-  let reward = .0;
+  let reward = 0.0;
   const transactions = block.data.transactions;
   for (let i = 0; i < transactions.length; i++) {
     const transaction = transactions[i];
@@ -932,7 +932,7 @@ export const verifyReward = (block: Block): number[] => {
 };
 
 const getReward = (transactions: Transaction[]): number => {
-  let reward = .0;
+  let reward = 0.0;
   for (let i = 0; i < transactions.length; i++) {
     const transaction = transactions[i];
     reward += transaction.inputAmount - transaction.outputAmount;
