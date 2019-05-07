@@ -14,6 +14,7 @@ export interface BlockHeader {
 }
 
 export interface BlockBody {
+  coinbaseTransaction: CoinbaseTransactionElement;
   transactions: TransactionElement[];
 }
 
@@ -24,6 +25,12 @@ export interface TransactionElement {
   randomHash: string;
   inputAmount: number;
   outputAmount: number;
+}
+
+export interface CoinbaseTransactionElement {
+  publicKey: string;
+  winningHash: string;
+  signature: string;
 }
 
 export interface MiningChild {

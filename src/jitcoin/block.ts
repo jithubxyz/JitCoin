@@ -4,7 +4,9 @@ import {
   getBlockHash,
   isHashMined,
   signTransaction,
-  verifySignature
+  verifySignature,
+  signCoinbaseTransaction,
+  getPublicKey
 } from '../misc/helper';
 import { fork, ChildProcess } from 'child_process';
 import { cpus } from 'os';
@@ -39,7 +41,7 @@ export class Block {
     data: Data,
     gameType: number,
     nonce?: number | undefined,
-    hash?: string | undefined,
+    hash?: string | undefined
   ) {
     this.previousBlockHash = previousBlockHash;
     this.data = data;
@@ -120,6 +122,7 @@ export class Block {
  * @class Data
  */
 export class Data {
+  coinbaseTransaction: CoinbaseTransaction | null;
   transactions: Transaction[];
 
   /**
@@ -130,6 +133,7 @@ export class Data {
    */
   constructor(transaction: Transaction) {
     this.transactions = [transaction];
+    this.coinbaseTransaction = null;
   }
 
   /**
@@ -188,6 +192,40 @@ export class Data {
       data.push(this.transactions[i].getData());
     }
     return stringify(data);
+  }
+
+  async createCoinbaseTransaction() {
+    const randomHashes = [];
+    for (const transaction of this.transactions) {
+      randomHashes.push(transaction.randomHash);
+    }
+    this.coinbaseTransaction = new CoinbaseTransaction(
+      (await getPublicKey()).toString('utf8'),
+      randomHashes
+    );
+  }
+
+  async signCoinbaseTransaction(passphrase: string): Promise<boolean> {
+    if (
+      this.coinbaseTransaction !== null &&
+      this.coinbaseTransaction !== undefined
+    ) {
+      const transactionSignatures = [];
+      for (const transaction of this.transactions) {
+        if (
+          transaction.signature !== null &&
+          transaction.signature !== undefined
+        ) {
+          transactionSignatures.push(transaction.signature);
+        } else {
+          return false;
+        }
+      }
+      await this.coinbaseTransaction.sign(transactionSignatures, passphrase);
+      return true;
+    } else {
+      return false;
+    }
   }
 }
 
@@ -268,5 +306,25 @@ export class Transaction {
           this.publicKey,
           this.signature
         );
+  }
+}
+
+export class CoinbaseTransaction {
+  publicKey: string;
+  winningHash: string;
+  signature: string | null;
+
+  constructor(publicKey: string, randomHashes: string[]) {
+    this.publicKey = publicKey;
+    this.winningHash = getBlockHash(stringify(randomHashes));
+    this.signature = null;
+  }
+
+  async sign(transactionSignatures: string[], passphrase: string) {
+    this.signature = await signCoinbaseTransaction(
+      this.winningHash,
+      transactionSignatures,
+      passphrase
+    );
   }
 }
