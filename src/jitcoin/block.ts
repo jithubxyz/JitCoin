@@ -27,6 +27,7 @@ export class Block {
   hash: string;
   nonce: number;
   gameType: number;
+  minedAt?: number;
 
   /**
    * Creates an instance of Block.
@@ -41,7 +42,8 @@ export class Block {
     data: Data,
     gameType: number,
     nonce?: number | undefined,
-    hash?: string | undefined
+    hash?: string | undefined,
+    minedAt?: number
   ) {
     this.previousBlockHash = previousBlockHash;
     this.data = data;
@@ -49,6 +51,7 @@ export class Block {
     this.nonce = nonce ? nonce : -1;
     this.merkleTree = data.getMerkleTree();
     this.gameType = gameType;
+    this.minedAt = minedAt;
   }
 
   /**
@@ -77,6 +80,7 @@ export class Block {
           }
           this.nonce = nonce;
           this.hash = hash;
+          this.minedAt = Date.now();
           await this.save();
           resolve(this.hash);
         });
@@ -109,7 +113,8 @@ export class Block {
       this.merkleTree,
       this.nonce,
       this.data,
-      this.gameType
+      this.gameType,
+      this.minedAt
     );
   }
 }

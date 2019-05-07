@@ -1,4 +1,5 @@
 import * as express from 'express';
+import * as cors from 'cors';
 import {
   PORT,
   TRANSACTIONS_PER_BLOCK,
@@ -44,7 +45,9 @@ let passphrase: string;
 
 const app = express();
 
-app.get(MINE, express.json(), async (_, res) => {
+app.use(cors({ origin: '*', allowedHeaders: '*' })); // we very likely only want to expose to our frontend
+
+app.post(MINE, async (_, res) => {
   if (!passphrase) {
     return sendResponse(
       res,
@@ -106,6 +109,8 @@ app.get(MINE, express.json(), async (_, res) => {
   await block.data.signCoinbaseTransaction(passphrase);
   await block.mine();
 
+  console.log(`Done mining block #${block.hash}`);
+
   const header = getJSONHeaderFromBlock(block);
   const body = getJSONBody(
     block.data.transactions,
@@ -118,7 +123,7 @@ app.get(MINE, express.json(), async (_, res) => {
       reward[1]
     } JitCoins!⛏️`,
     RESPONSE_CODES.PASS,
-    [header, body]
+    { header, body }
   );
 });
 
@@ -175,7 +180,7 @@ app.post(PLACE_BET, express.json(), async (req, res) => {
       res,
       'The new Block was created successfully!👍',
       RESPONSE_CODES.PASS,
-      [header, body]
+      { header, body }
     );
   }
 
@@ -207,7 +212,7 @@ app.post(PLACE_BET, express.json(), async (req, res) => {
       res,
       'Transaction was added successfully!😁',
       RESPONSE_CODES.PASS,
-      [header, body]
+      { header, body }
     );
   }
 
@@ -244,11 +249,11 @@ app.post(PLACE_BET, express.json(), async (req, res) => {
     res,
     'The new Block was created successfully!👍',
     RESPONSE_CODES.PASS,
-    [header, body]
+    { header, body}
   );
 });
 
-app.get(LAST_BLOCK, express.json(), async (req, res) => {
+app.post(LAST_BLOCK, async (req, res) => {
   const block = await getLastBlock();
   if (block === null) {
     return sendResponse(
@@ -264,10 +269,7 @@ app.get(LAST_BLOCK, express.json(), async (req, res) => {
     block.data.coinbaseTransaction
   );
 
-  sendResponse(res, 'Here is the last block!👍', RESPONSE_CODES.PASS, [
-    header,
-    body
-  ]);
+  sendResponse(res, 'Here is the last block!👍', RESPONSE_CODES.PASS, { header, body });
 });
 
 app.post(GET_BLOCK_BY_HASH, express.json(), async (req, res) => {
@@ -288,13 +290,10 @@ app.post(GET_BLOCK_BY_HASH, express.json(), async (req, res) => {
     block.data.coinbaseTransaction
   );
 
-  sendResponse(res, 'Here is the requested block!👍', RESPONSE_CODES.PASS, [
-    header,
-    [header, body]
-  ]);
+  sendResponse(res, 'Here is the requested block!👍', RESPONSE_CODES.PASS, { header, body });
 });
 
-app.get(DELETE_LAST_BLOCK, express.json(), async (req, res) => {
+app.post(DELETE_LAST_BLOCK, async (req, res) => {
   if (await deleteLastBlock()) {
     sendResponse(res, 'The Block was deleted!👍', RESPONSE_CODES.PASS);
   } else {
@@ -354,7 +353,7 @@ app.post(FILE_AS_ARRAY, express.json(), async (req, res) => {
   }
 });
 
-app.get(FILE_COUNT, express.json(), async (_req, res) => {
+app.post(FILE_COUNT, async (_req, res) => {
   const count = await getFileCount();
 
   if (count !== -1) {
@@ -422,7 +421,7 @@ app.post(UNLOCK_WALLET, express.json(), async (req, res) => {
   }
 });
 
-app.get(GET_BALANCE, express.json(), async (_, res) => {
+app.post(GET_BALANCE, async (_, res) => {
   if (!(await walletExists())) {
     sendResponse(
       res,
